@@ -35,6 +35,7 @@ import com.facebook.presto.spi.plan.UnionNode;
 import com.facebook.presto.spi.plan.ValuesNode;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.PlanFragment;
 import com.facebook.presto.sql.planner.SubPlan;
 import com.facebook.presto.sql.planner.optimizations.JoinNodeUtils;
@@ -558,7 +559,7 @@ public final class GraphvizPrinter
         public Void visitJoin(JoinNode node, Void context)
         {
             List<Expression> joinExpressions = new ArrayList<>();
-            for (JoinNode.EquiJoinClause clause : node.getCriteria()) {
+            for (CanonicalJoinNode.EquiJoinClause clause : node.getCriteria()) {
                 joinExpressions.add(JoinNodeUtils.toExpression(clause));
             }
             String joinCriteria = Joiner.on(" AND ").join(joinExpressions);

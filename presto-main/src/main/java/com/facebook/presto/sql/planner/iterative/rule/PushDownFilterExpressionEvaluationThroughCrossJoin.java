@@ -25,6 +25,7 @@ import com.facebook.presto.spi.plan.ProjectNode;
 import com.facebook.presto.spi.relation.CallExpression;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.PlannerUtils;
 import com.facebook.presto.sql.planner.iterative.Rule;
 import com.facebook.presto.sql.planner.plan.JoinNode;
@@ -81,7 +82,7 @@ public class PushDownFilterExpressionEvaluationThroughCrossJoin
     private static final Capture<JoinNode> CHILD = newCapture();
 
     private static final Pattern<FilterNode> PATTERN = filter()
-            .with(source().matching(join().matching(x -> x.getCriteria().isEmpty() && x.getType().equals(JoinNode.Type.INNER)).capturedAs(CHILD)));
+            .with(source().matching(join().matching(x -> x.getCriteria().isEmpty() && x.getType().equals(CanonicalJoinNode.Type.INNER)).capturedAs(CHILD)));
 
     private final FunctionAndTypeManager functionAndTypeManager;
     private final RowExpressionDeterminismEvaluator determinismEvaluator;

@@ -46,6 +46,7 @@ import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.analyzer.FeaturesConfig.AggregationPartitioningMergingStrategy;
 import com.facebook.presto.sql.analyzer.FeaturesConfig.PartialMergePushdownStrategy;
 import com.facebook.presto.sql.parser.SqlParser;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.Partitioning;
 import com.facebook.presto.sql.planner.PartitioningHandle;
 import com.facebook.presto.sql.planner.PartitioningProviderManager;
@@ -821,10 +822,10 @@ public class AddExchanges
         public PlanWithProperties visitJoin(JoinNode node, PreferredProperties preferredProperties)
         {
             List<VariableReferenceExpression> leftVariables = node.getCriteria().stream()
-                    .map(JoinNode.EquiJoinClause::getLeft)
+                    .map(CanonicalJoinNode.EquiJoinClause::getLeft)
                     .collect(toImmutableList());
             List<VariableReferenceExpression> rightVariables = node.getCriteria().stream()
-                    .map(JoinNode.EquiJoinClause::getRight)
+                    .map(CanonicalJoinNode.EquiJoinClause::getRight)
                     .collect(toImmutableList());
 
             JoinNode.DistributionType distributionType = node.getDistributionType().orElseThrow(() -> new IllegalArgumentException("distributionType not yet set"));

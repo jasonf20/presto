@@ -18,7 +18,6 @@ import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
-import com.facebook.presto.sql.planner.plan.JoinNode;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -35,8 +34,8 @@ public class CanonicalJoinNode
         extends PlanNode
 {
     private final List<PlanNode> sources;
-    private final JoinNode.Type type;
-    private final Set<JoinNode.EquiJoinClause> criteria;
+    private final Type type;
+    private final Set<EquiJoinClause> criteria;
     private final Set<RowExpression> filters;
     private final List<VariableReferenceExpression> outputVariables;
 
@@ -44,8 +43,8 @@ public class CanonicalJoinNode
     public CanonicalJoinNode(
             @JsonProperty("id") PlanNodeId id,
             @JsonProperty("sources") List<PlanNode> sources,
-            @JsonProperty("type") JoinNode.Type type,
-            @JsonProperty("criteria") Set<JoinNode.EquiJoinClause> criteria,
+            @JsonProperty("type") Type type,
+            @JsonProperty("criteria") Set<EquiJoinClause> criteria,
             @JsonProperty("filter") Set<RowExpression> filters,
             @JsonProperty("outputVariables") List<VariableReferenceExpression> outputVariables)
     {
@@ -65,13 +64,13 @@ public class CanonicalJoinNode
     }
 
     @JsonProperty
-    public JoinNode.Type getType()
+    public Type getType()
     {
         return type;
     }
 
     @JsonProperty
-    public Set<JoinNode.EquiJoinClause> getCriteria()
+    public Set<EquiJoinClause> getCriteria()
     {
         return criteria;
     }
@@ -136,5 +135,96 @@ public class CanonicalJoinNode
                 ", filters=" + filters +
                 ", outputVariables=" + outputVariables +
                 '}';
+    }
+
+    public enum Type
+    {
+        INNER("InnerJoin"),
+        LEFT("LeftJoin"),
+        RIGHT("RightJoin"),
+        FULL("FullJoin");
+
+        private final String joinLabel;
+
+        Type(String joinLabel)
+        {
+            this.joinLabel = joinLabel;
+        }
+
+        public String getJoinLabel()
+        {
+            return joinLabel;
+        }
+
+        public boolean mustPartition()
+        {
+            // With REPLICATED, the unmatched rows from right-side would be duplicated.
+            return this == RIGHT || this == FULL;
+        }
+
+        public boolean mustReplicate(List<EquiJoinClause> criteria)
+        {
+            // There is nothing to partition on
+            return criteria.isEmpty() && (this == INNER || this == LEFT);
+        }
+    }
+
+    public static class EquiJoinClause
+    {
+        private final VariableReferenceExpression left;
+        private final VariableReferenceExpression right;
+
+        @JsonCreator
+        public EquiJoinClause(@JsonProperty("left") VariableReferenceExpression left, @JsonProperty("right") VariableReferenceExpression right)
+        {
+            this.left = requireNonNull(left, "left is null");
+            this.right = requireNonNull(right, "right is null");
+        }
+
+        @JsonProperty
+        public VariableReferenceExpression getLeft()
+        {
+            return left;
+        }
+
+        @JsonProperty
+        public VariableReferenceExpression getRight()
+        {
+            return right;
+        }
+
+        public EquiJoinClause flip()
+        {
+            return new EquiJoinClause(right, left);
+        }
+
+        @Override
+        public boolean equals(Object obj)
+        {
+            if (this == obj) {
+                return true;
+            }
+
+            if (obj == null || !this.getClass().equals(obj.getClass())) {
+                return false;
+            }
+
+            EquiJoinClause other = (EquiJoinClause) obj;
+
+            return Objects.equals(this.left, other.left) &&
+                    Objects.equals(this.right, other.right);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(left, right);
+        }
+
+        @Override
+        public String toString()
+        {
+            return format("%s = %s", left, right);
+        }
     }
 }

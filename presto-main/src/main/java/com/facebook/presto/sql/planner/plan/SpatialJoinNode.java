@@ -18,6 +18,7 @@ import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -53,7 +54,7 @@ public class SpatialJoinNode
             return joinLabel;
         }
 
-        public static Type fromJoinNodeType(JoinNode.Type joinNodeType)
+        public static Type fromJoinNodeType(CanonicalJoinNode.Type joinNodeType)
         {
             switch (joinNodeType) {
                 case INNER:

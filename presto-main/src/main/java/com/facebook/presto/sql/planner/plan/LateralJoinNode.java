@@ -17,6 +17,7 @@ import com.facebook.presto.spi.SourceLocation;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -42,17 +43,17 @@ public class LateralJoinNode
 {
     public enum Type
     {
-        INNER(JoinNode.Type.INNER),
-        LEFT(JoinNode.Type.LEFT);
+        INNER(CanonicalJoinNode.Type.INNER),
+        LEFT(CanonicalJoinNode.Type.LEFT);
 
-        Type(JoinNode.Type joinNodeType)
+        Type(CanonicalJoinNode.Type joinNodeType)
         {
             this.joinNodeType = joinNodeType;
         }
 
-        private final JoinNode.Type joinNodeType;
+        private final CanonicalJoinNode.Type joinNodeType;
 
-        public JoinNode.Type toJoinNodeType()
+        public CanonicalJoinNode.Type toJoinNodeType()
         {
             return joinNodeType;
         }

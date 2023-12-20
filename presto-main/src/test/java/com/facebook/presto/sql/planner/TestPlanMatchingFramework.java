@@ -25,6 +25,7 @@ import static com.facebook.presto.SystemSessionProperties.JOIN_DISTRIBUTION_TYPE
 import static com.facebook.presto.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
 import static com.facebook.presto.sql.analyzer.FeaturesConfig.JoinDistributionType.PARTITIONED;
 import static com.facebook.presto.sql.analyzer.FeaturesConfig.JoinReorderingStrategy.ELIMINATE_CROSS_JOINS;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.aggregation;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.anyTree;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.columnReference;
@@ -40,7 +41,6 @@ import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.strict
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.strictTableScan;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.tableScan;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.values;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
 import static org.testng.Assert.fail;
 
 public class TestPlanMatchingFramework

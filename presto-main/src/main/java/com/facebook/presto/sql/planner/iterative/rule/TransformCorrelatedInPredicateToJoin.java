@@ -28,6 +28,7 @@ import com.facebook.presto.spi.relation.ConstantExpression;
 import com.facebook.presto.spi.relation.InSubqueryExpression;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.TypeProvider;
 import com.facebook.presto.sql.planner.VariablesExtractor;
 import com.facebook.presto.sql.planner.iterative.Lookup;
@@ -260,7 +261,7 @@ public class TransformCorrelatedInPredicateToJoin
         return new JoinNode(
                 probeSide.getSourceLocation(),
                 idAllocator.getNextId(),
-                JoinNode.Type.LEFT,
+                CanonicalJoinNode.Type.LEFT,
                 probeSide,
                 buildSide,
                 ImmutableList.of(),

@@ -25,6 +25,7 @@ import com.facebook.presto.spi.plan.PlanNodeIdAllocator;
 import com.facebook.presto.spi.plan.TableScanNode;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.parser.SqlParser;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.Plan;
 import com.facebook.presto.sql.planner.TypeProvider;
 import com.facebook.presto.sql.planner.assertions.BasePlanTest;
@@ -48,13 +49,13 @@ import java.util.Optional;
 
 import static com.facebook.presto.common.type.BigintType.BIGINT;
 import static com.facebook.presto.sql.ExpressionUtils.combineDisjuncts;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.equiJoinClause;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.filter;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.join;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.output;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.tableScan;
 import static com.facebook.presto.sql.planner.optimizations.PredicatePushDown.createDynamicFilterExpression;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -103,7 +104,7 @@ public class TestRemoveUnsupportedDynamicFilters
                 INNER,
                 builder.filter(builder.rowExpression("ORDERS_OK > 0"), ordersTableScanNode),
                 lineitemTableScanNode,
-                ImmutableList.of(new JoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
+                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
                 ImmutableList.of(ordersOrderKeyVariable),
                 Optional.empty(),
                 Optional.empty(),
@@ -129,7 +130,7 @@ public class TestRemoveUnsupportedDynamicFilters
                 builder.filter(
                         createDynamicFilterExpression("DF", ordersOrderKeyVariable, metadata.getFunctionAndTypeManager()),
                         lineitemTableScanNode),
-                ImmutableList.of(new JoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
+                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
                 ImmutableList.of(ordersOrderKeyVariable),
                 Optional.empty(),
                 Optional.empty(),
@@ -156,7 +157,7 @@ public class TestRemoveUnsupportedDynamicFilters
                                         builder.rowExpression("LINEITEM_OK > 0"),
                                         createDynamicFilterExpression("DF", lineitemOrderKeyVariable, metadata.getFunctionAndTypeManager())),
                                 lineitemTableScanNode),
-                        ImmutableList.of(new JoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
+                        ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
                         ImmutableList.of(),
                         Optional.empty(),
                         Optional.empty(),
@@ -190,7 +191,7 @@ public class TestRemoveUnsupportedDynamicFilters
                                                 builder.rowExpression("LINEITEM_OK IS NOT NULL"),
                                                 createDynamicFilterExpression("DF", lineitemOrderKeyVariable, metadata.getFunctionAndTypeManager()))),
                                 lineitemTableScanNode),
-                        ImmutableList.of(new JoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
+                        ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
                         ImmutableList.of(ordersOrderKeyVariable),
                         Optional.empty(),
                         Optional.empty(),
@@ -221,7 +222,7 @@ public class TestRemoveUnsupportedDynamicFilters
                                                 builder.rowExpression("LINEITEM_OK IS NOT NULL"),
                                                 createDynamicFilterExpression("DF", lineitemOrderKeyVariable, metadata.getFunctionAndTypeManager()))),
                                 lineitemTableScanNode),
-                        ImmutableList.of(new JoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
+                        ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
                         ImmutableList.of(ordersOrderKeyVariable),
                         Optional.empty(),
                         Optional.empty(),

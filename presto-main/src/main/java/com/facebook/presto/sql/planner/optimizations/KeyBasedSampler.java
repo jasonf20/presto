@@ -34,6 +34,7 @@ import com.facebook.presto.spi.relation.ConstantExpression;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.parser.SqlParser;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.TypeProvider;
 import com.facebook.presto.sql.planner.plan.JoinNode;
 import com.facebook.presto.sql.planner.plan.RowNumberNode;
@@ -227,7 +228,7 @@ public class KeyBasedSampler
 
                 // Find the best equijoin clause so we sample both sides the same way optimally
                 // First see if there is a int/bigint key
-                Optional<JoinNode.EquiJoinClause> equiJoinClause = node.getCriteria().stream()
+                Optional<CanonicalJoinNode.EquiJoinClause> equiJoinClause = node.getCriteria().stream()
                         .filter(x -> TypeUtils.isIntegralType(x.getLeft().getType().getTypeSignature(), functionAndTypeManager))
                         .findFirst();
                 if (!equiJoinClause.isPresent()) {

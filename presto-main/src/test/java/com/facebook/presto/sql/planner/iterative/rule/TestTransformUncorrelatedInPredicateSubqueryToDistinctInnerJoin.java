@@ -33,6 +33,7 @@ import static com.facebook.presto.SystemSessionProperties.JOIN_REORDERING_STRATE
 import static com.facebook.presto.expressions.LogicalRowExpressions.TRUE_CONSTANT;
 import static com.facebook.presto.spi.plan.AggregationNode.Step.SINGLE;
 import static com.facebook.presto.sql.analyzer.FeaturesConfig.JoinReorderingStrategy.AUTOMATIC;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.aggregation;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.anyTree;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.assignUniqueId;
@@ -43,7 +44,6 @@ import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.projec
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.tableScan;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.values;
 import static com.facebook.presto.sql.planner.iterative.rule.test.PlanBuilder.assignment;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
 import static com.facebook.presto.sql.relational.Expressions.inSubquery;
 import static java.util.Collections.emptyList;
 

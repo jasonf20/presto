@@ -314,6 +314,9 @@ import static com.facebook.presto.spi.plan.ProjectNode.Locality.REMOTE;
 import static com.facebook.presto.spi.relation.ExpressionOptimizer.Level.OPTIMIZED;
 import static com.facebook.presto.sql.analyzer.ExpressionTreeUtils.createSymbolReference;
 import static com.facebook.presto.sql.gen.LambdaBytecodeGenerator.compileLambdaProvider;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.FULL;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.RowExpressionInterpreter.rowExpressionInterpreter;
 import static com.facebook.presto.sql.planner.SystemPartitioningHandle.COORDINATOR_DISTRIBUTION;
 import static com.facebook.presto.sql.planner.SystemPartitioningHandle.FIXED_ARBITRARY_DISTRIBUTION;
@@ -322,9 +325,6 @@ import static com.facebook.presto.sql.planner.SystemPartitioningHandle.SCALED_WR
 import static com.facebook.presto.sql.planner.SystemPartitioningHandle.SINGLE_DISTRIBUTION;
 import static com.facebook.presto.sql.planner.plan.AssignmentUtils.identityAssignments;
 import static com.facebook.presto.sql.planner.plan.JoinNode.DistributionType.REPLICATED;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.FULL;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.relational.Expressions.constant;
 import static com.facebook.presto.sql.tree.SortItem.Ordering.ASCENDING;
 import static com.facebook.presto.sql.tree.SortItem.Ordering.DESCENDING;
@@ -1940,9 +1940,9 @@ public class LocalExecutionPlanner
                 return createNestedLoopJoin(node, context);
             }
 
-            List<JoinNode.EquiJoinClause> clauses = node.getCriteria();
-            List<VariableReferenceExpression> leftVariables = Lists.transform(clauses, JoinNode.EquiJoinClause::getLeft);
-            List<VariableReferenceExpression> rightVariables = Lists.transform(clauses, JoinNode.EquiJoinClause::getRight);
+            List<CanonicalJoinNode.EquiJoinClause> clauses = node.getCriteria();
+            List<VariableReferenceExpression> leftVariables = Lists.transform(clauses, CanonicalJoinNode.EquiJoinClause::getLeft);
+            List<VariableReferenceExpression> rightVariables = Lists.transform(clauses, CanonicalJoinNode.EquiJoinClause::getRight);
 
             switch (node.getType()) {
                 case INNER:

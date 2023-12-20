@@ -27,12 +27,12 @@ import com.facebook.presto.spi.plan.TableScanNode;
 import com.facebook.presto.spi.plan.ValuesNode;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.analyzer.FeaturesConfig.JoinDistributionType;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
+import com.facebook.presto.sql.planner.CanonicalJoinNode.Type;
 import com.facebook.presto.sql.planner.iterative.rule.test.PlanBuilder;
 import com.facebook.presto.sql.planner.iterative.rule.test.RuleAssert;
 import com.facebook.presto.sql.planner.iterative.rule.test.RuleTester;
-import com.facebook.presto.sql.planner.plan.JoinNode;
 import com.facebook.presto.sql.planner.plan.JoinNode.DistributionType;
-import com.facebook.presto.sql.planner.plan.JoinNode.Type;
 import com.facebook.presto.sql.planner.plan.UnnestNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
@@ -49,6 +49,10 @@ import static com.facebook.presto.SystemSessionProperties.USE_BROADCAST_WHEN_BUI
 import static com.facebook.presto.common.type.BigintType.BIGINT;
 import static com.facebook.presto.common.type.VarcharType.createUnboundedVarcharType;
 import static com.facebook.presto.expressions.LogicalRowExpressions.TRUE_CONSTANT;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.FULL;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.LEFT;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.enforceSingleRow;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.equiJoinClause;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.filter;
@@ -60,10 +64,6 @@ import static com.facebook.presto.sql.planner.iterative.rule.JoinSwappingUtils.g
 import static com.facebook.presto.sql.planner.iterative.rule.test.PlanBuilder.constantExpressions;
 import static com.facebook.presto.sql.planner.plan.JoinNode.DistributionType.PARTITIONED;
 import static com.facebook.presto.sql.planner.plan.JoinNode.DistributionType.REPLICATED;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.FULL;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.LEFT;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.RIGHT;
 import static java.lang.Double.NaN;
 import static org.testng.Assert.assertEquals;
 
@@ -116,7 +116,7 @@ public class TestDetermineJoinDistributionType
                                 p.values(
                                         ImmutableList.of(p.variable("B1")),
                                         ImmutableList.of(constantExpressions(BIGINT, 50L), constantExpressions(BIGINT, 11L))),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .setSystemProperty(JOIN_DISTRIBUTION_TYPE, sessionDistributedJoin.name())
@@ -152,7 +152,7 @@ public class TestDetermineJoinDistributionType
                                 p.values(
                                         ImmutableList.of(p.variable("B1")),
                                         ImmutableList.of(constantExpressions(BIGINT, 50L), constantExpressions(BIGINT, 11L))),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .setSystemProperty(JOIN_DISTRIBUTION_TYPE, sessionDistributedJoin.name())
@@ -179,7 +179,7 @@ public class TestDetermineJoinDistributionType
                                         p.values(
                                                 ImmutableList.of(p.variable("B1")),
                                                 ImmutableList.of(constantExpressions(BIGINT, 50L), constantExpressions(BIGINT, 11L)))),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .setSystemProperty(JOIN_DISTRIBUTION_TYPE, JoinDistributionType.PARTITIONED.name())
@@ -237,7 +237,7 @@ public class TestDetermineJoinDistributionType
                                 p.values(
                                         ImmutableList.of(p.variable("B1")),
                                         ImmutableList.of(constantExpressions(BIGINT, 50L), constantExpressions(BIGINT, 11L))),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty(),
                                 Optional.empty(),
@@ -267,7 +267,7 @@ public class TestDetermineJoinDistributionType
                                 INNER,
                                 p.values(new PlanNodeId("valuesA"), aRows, p.variable("A1", BIGINT)),
                                 p.values(new PlanNodeId("valuesB"), bRows, p.variable("B1", BIGINT)),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .matches(join(
@@ -301,7 +301,7 @@ public class TestDetermineJoinDistributionType
                                 INNER,
                                 p.values(new PlanNodeId("valuesA"), aRows, p.variable("A1", BIGINT)),
                                 p.values(new PlanNodeId("valuesB"), bRows, p.variable("B1", BIGINT)),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .matches(join(
@@ -333,7 +333,7 @@ public class TestDetermineJoinDistributionType
                                 INNER,
                                 p.values(new PlanNodeId("valuesA"), aRows, p.variable("A1", BIGINT)),
                                 p.values(new PlanNodeId("valuesB"), bRows, p.variable("B1", BIGINT)),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .setSystemProperty(JOIN_DISTRIBUTION_TYPE, JoinDistributionType.PARTITIONED.name())
@@ -366,7 +366,7 @@ public class TestDetermineJoinDistributionType
                                 INNER,
                                 p.values(new PlanNodeId("valuesA"), aRows, p.variable("A1", BIGINT)),
                                 p.values(new PlanNodeId("valuesB"), bRows, p.variable("B1", BIGINT)),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .matches(join(
@@ -398,7 +398,7 @@ public class TestDetermineJoinDistributionType
                                 INNER,
                                 p.values(new PlanNodeId("valuesA"), aRows, p.variable("A1", BIGINT)),
                                 p.values(new PlanNodeId("valuesB"), bRows, p.variable("B1", BIGINT)),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .setSystemProperty(JOIN_DISTRIBUTION_TYPE, JoinDistributionType.BROADCAST.name())
@@ -431,7 +431,7 @@ public class TestDetermineJoinDistributionType
                                 FULL,
                                 p.values(new PlanNodeId("valuesA"), aRows, p.variable("A1", BIGINT)),
                                 p.values(new PlanNodeId("valuesB"), bRows, p.variable("B1", BIGINT)),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .matches(join(
@@ -463,7 +463,7 @@ public class TestDetermineJoinDistributionType
                                 RIGHT,
                                 p.values(new PlanNodeId("valuesA"), aRows, p.variable("A1", BIGINT)),
                                 p.values(new PlanNodeId("valuesB"), bRows, p.variable("B1", BIGINT)),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .matches(join(
@@ -495,7 +495,7 @@ public class TestDetermineJoinDistributionType
                                 LEFT,
                                 p.values(new PlanNodeId("valuesA"), aRows, p.variable("A1", BIGINT)),
                                 p.values(new PlanNodeId("valuesB"), bRows, p.variable("B1", BIGINT)),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .matches(join(
@@ -527,7 +527,7 @@ public class TestDetermineJoinDistributionType
                                 RIGHT,
                                 p.values(new PlanNodeId("valuesA"), aRows, p.variable("A1", BIGINT)),
                                 p.values(new PlanNodeId("valuesB"), bRows, p.variable("B1", BIGINT)),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .matches(join(
@@ -561,7 +561,7 @@ public class TestDetermineJoinDistributionType
                                 RIGHT,
                                 p.values(new PlanNodeId("valuesA"), aRows, p.variable("A1", BIGINT)),
                                 p.values(new PlanNodeId("valuesB"), bRows, p.variable("B1", BIGINT)),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .matches(join(
@@ -599,7 +599,7 @@ public class TestDetermineJoinDistributionType
                                 INNER,
                                 p.values(new PlanNodeId("valuesA"), aRows, p.variable("A1", BIGINT)),
                                 p.values(new PlanNodeId("valuesB"), bRows, p.variable("B1", BIGINT)),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .matches(join(
@@ -630,7 +630,7 @@ public class TestDetermineJoinDistributionType
                                 INNER,
                                 p.values(new PlanNodeId("valuesA"), aRows, p.variable("A1", BIGINT)),
                                 p.values(new PlanNodeId("valuesB"), bRows, p.variable("B1", BIGINT)),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty()))
                 .matches(join(
@@ -752,7 +752,7 @@ public class TestDetermineJoinDistributionType
                             INNER,
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
                             p.filter(new PlanNodeId("filterB"), TRUE_CONSTANT, p.values(new PlanNodeId("valuesB"), bRows, b1)),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(a1, b1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(a1, b1)),
                             ImmutableList.of(a1, b1),
                             Optional.empty());
                 })
@@ -778,7 +778,7 @@ public class TestDetermineJoinDistributionType
                             INNER,
                             p.filter(new PlanNodeId("filterB"), TRUE_CONSTANT, p.values(new PlanNodeId("valuesB"), bRows, b1)),
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(b1, a1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(b1, a1)),
                             ImmutableList.of(b1, a1),
                             Optional.empty());
                 })
@@ -804,7 +804,7 @@ public class TestDetermineJoinDistributionType
                             LEFT,
                             p.filter(new PlanNodeId("filterB"), TRUE_CONSTANT, p.values(new PlanNodeId("valuesB"), bRows, b1)),
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(b1, a1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(b1, a1)),
                             ImmutableList.of(b1, a1),
                             Optional.empty());
                 })
@@ -853,7 +853,7 @@ public class TestDetermineJoinDistributionType
                             INNER,
                             p.values(new PlanNodeId("valuesB"), bRows, b1),
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(b1, a1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(b1, a1)),
                             ImmutableList.of(b1, a1),
                             Optional.empty());
                 })
@@ -878,7 +878,7 @@ public class TestDetermineJoinDistributionType
                             INNER,
                             p.values(new PlanNodeId("valuesB"), bRows, b1),
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(b1, a1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(b1, a1)),
                             ImmutableList.of(b1, a1),
                             Optional.empty());
                 })
@@ -904,7 +904,7 @@ public class TestDetermineJoinDistributionType
                             INNER,
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
                             p.values(new PlanNodeId("valuesB"), bRows, b1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(a1, b1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(a1, b1)),
                             ImmutableList.of(a1, b1),
                             Optional.empty());
                 })
@@ -929,7 +929,7 @@ public class TestDetermineJoinDistributionType
                             INNER,
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
                             p.values(new PlanNodeId("valuesB"), bRows, b1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(a1, b1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(a1, b1)),
                             ImmutableList.of(a1, b1),
                             Optional.empty());
                 })
@@ -954,7 +954,7 @@ public class TestDetermineJoinDistributionType
                             INNER,
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
                             p.values(new PlanNodeId("valuesB"), bRows, b1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(a1, b1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(a1, b1)),
                             ImmutableList.of(a1, b1),
                             Optional.empty());
                 })
@@ -980,7 +980,7 @@ public class TestDetermineJoinDistributionType
                             LEFT,
                             p.values(new PlanNodeId("valuesB"), bRows, b1),
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(b1, a1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(b1, a1)),
                             ImmutableList.of(b1, a1),
                             Optional.empty());
                 })
@@ -1005,7 +1005,7 @@ public class TestDetermineJoinDistributionType
                             LEFT,
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
                             p.values(new PlanNodeId("valuesB"), bRows, b1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(a1, b1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(a1, b1)),
                             ImmutableList.of(a1, b1),
                             Optional.empty());
                 })
@@ -1030,7 +1030,7 @@ public class TestDetermineJoinDistributionType
                             LEFT,
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
                             p.values(new PlanNodeId("valuesB"), bRows, b1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(a1, b1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(a1, b1)),
                             ImmutableList.of(a1, b1),
                             Optional.empty());
                 })
@@ -1055,7 +1055,7 @@ public class TestDetermineJoinDistributionType
                             RIGHT,
                             p.values(new PlanNodeId("valuesB"), bRows, b1),
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(b1, a1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(b1, a1)),
                             ImmutableList.of(b1, a1),
                             Optional.empty());
                 })
@@ -1080,7 +1080,7 @@ public class TestDetermineJoinDistributionType
                             RIGHT,
                             p.values(new PlanNodeId("valuesB"), bRows, b1),
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(b1, a1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(b1, a1)),
                             ImmutableList.of(b1, a1),
                             Optional.empty());
                 })
@@ -1105,7 +1105,7 @@ public class TestDetermineJoinDistributionType
                             RIGHT,
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
                             p.values(new PlanNodeId("valuesB"), bRows, b1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(a1, b1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(a1, b1)),
                             ImmutableList.of(a1, b1),
                             Optional.empty());
                 })
@@ -1130,7 +1130,7 @@ public class TestDetermineJoinDistributionType
                             FULL,
                             p.values(new PlanNodeId("valuesB"), bRows, b1),
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(b1, a1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(b1, a1)),
                             ImmutableList.of(b1, a1),
                             Optional.empty());
                 })
@@ -1155,7 +1155,7 @@ public class TestDetermineJoinDistributionType
                             FULL,
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
                             p.values(new PlanNodeId("valuesB"), bRows, b1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(a1, b1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(a1, b1)),
                             ImmutableList.of(a1, b1),
                             Optional.empty());
                 })
@@ -1208,7 +1208,7 @@ public class TestDetermineJoinDistributionType
                                     new PlanNodeId("filterB"),
                                     TRUE_CONSTANT,
                                     p.values(new PlanNodeId("valuesB"), bRows, b1)),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(a1, b1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(a1, b1)),
                             ImmutableList.of(a1, b1),
                             Optional.empty());
                 })
@@ -1237,7 +1237,7 @@ public class TestDetermineJoinDistributionType
                                     TRUE_CONSTANT,
                                     p.values(new PlanNodeId("valuesB"), bRows, b1)),
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(b1, a1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(b1, a1)),
                             ImmutableList.of(b1, a1),
                             Optional.empty());
                 })
@@ -1301,7 +1301,7 @@ public class TestDetermineJoinDistributionType
                                     TRUE_CONSTANT,
                                     p.values(new PlanNodeId("valuesB"), aRows, b1)),
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(b1, a1)),
+                            ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(b1, a1)),
                             ImmutableList.of(b1, a1),
                             Optional.empty());
                 })

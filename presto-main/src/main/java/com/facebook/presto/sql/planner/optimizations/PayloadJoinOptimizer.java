@@ -30,6 +30,7 @@ import com.facebook.presto.spi.plan.ProjectNode;
 import com.facebook.presto.spi.plan.TableScanNode;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.TypeProvider;
 import com.facebook.presto.sql.planner.VariablesExtractor;
 import com.facebook.presto.sql.planner.plan.JoinNode;
@@ -57,6 +58,7 @@ import static com.facebook.presto.common.type.TypeUtils.isNumericType;
 import static com.facebook.presto.spi.plan.AggregationNode.Step.SINGLE;
 import static com.facebook.presto.spi.plan.AggregationNode.singleGroupingSet;
 import static com.facebook.presto.spi.relation.SpecialFormExpression.Form.IS_NULL;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.LEFT;
 import static com.facebook.presto.sql.planner.PlannerUtils.addProjections;
 import static com.facebook.presto.sql.planner.PlannerUtils.clonePlanNode;
 import static com.facebook.presto.sql.planner.PlannerUtils.coalesce;
@@ -64,7 +66,6 @@ import static com.facebook.presto.sql.planner.PlannerUtils.equalityPredicate;
 import static com.facebook.presto.sql.planner.PlannerUtils.isScanFilterProject;
 import static com.facebook.presto.sql.planner.PlannerUtils.restrictOutput;
 import static com.facebook.presto.sql.planner.plan.ChildReplacer.replaceChildren;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.LEFT;
 import static com.facebook.presto.sql.relational.Expressions.constant;
 import static com.facebook.presto.sql.relational.Expressions.specialForm;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -267,7 +268,7 @@ public class PayloadJoinOptimizer
             return newChild;
         }
 
-        private boolean needsRewrite(JoinNode.Type joinType, ImmutableSet<VariableReferenceExpression> leftColumns, Set<VariableReferenceExpression> joinKeys)
+        private boolean needsRewrite(CanonicalJoinNode.Type joinType, ImmutableSet<VariableReferenceExpression> leftColumns, Set<VariableReferenceExpression> joinKeys)
         {
             return joinType == LEFT && supportedJoinKeyTypes(joinKeys) && leftColumns.stream().anyMatch(var -> !joinKeys.contains(var));
         }
@@ -443,7 +444,7 @@ public class PayloadJoinOptimizer
             return new JoinNode(
                     keysNode.getSourceLocation(),
                     planNodeIdAllocator.getNextId(),
-                    JoinNode.Type.LEFT,
+                    CanonicalJoinNode.Type.LEFT,
                     payloadPlanNode,
                     projectNode,
                     ImmutableList.of(),
@@ -488,7 +489,7 @@ public class PayloadJoinOptimizer
             return coalesce(ImmutableList.of(var, zero));
         }
 
-        private Set<VariableReferenceExpression> extractJoinKeys(Optional<RowExpression> filter, List<JoinNode.EquiJoinClause> criteria)
+        private Set<VariableReferenceExpression> extractJoinKeys(Optional<RowExpression> filter, List<CanonicalJoinNode.EquiJoinClause> criteria)
         {
             ImmutableSet.Builder<VariableReferenceExpression> builder = ImmutableSet.builder();
 

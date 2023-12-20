@@ -24,6 +24,7 @@ import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.relation.CallExpression;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.PlannerUtils;
 import com.facebook.presto.sql.planner.iterative.Rule;
 import com.facebook.presto.sql.planner.plan.JoinNode;
@@ -76,7 +77,7 @@ public class CrossJoinWithArrayContainsToInnerJoin
 {
     private static final Capture<JoinNode> CHILD = newCapture();
     private static final Pattern<FilterNode> PATTERN = filter()
-            .with(source().matching(join().matching(x -> x.getType().equals(JoinNode.Type.INNER) && x.getCriteria().isEmpty()).capturedAs(CHILD)));
+            .with(source().matching(join().matching(x -> x.getType().equals(CanonicalJoinNode.Type.INNER) && x.getCriteria().isEmpty()).capturedAs(CHILD)));
 
     private final FunctionAndTypeManager functionAndTypeManager;
 
@@ -112,7 +113,7 @@ public class CrossJoinWithArrayContainsToInnerJoin
     public Result apply(FilterNode node, Captures captures, Context context)
     {
         JoinNode joinNode = captures.get(CHILD);
-        if (!(joinNode.getType().equals(JoinNode.Type.INNER) && joinNode.getCriteria().isEmpty())) {
+        if (!(joinNode.getType().equals(CanonicalJoinNode.Type.INNER) && joinNode.getCriteria().isEmpty())) {
             return Result.empty();
         }
         List<VariableReferenceExpression> leftInput = joinNode.getLeft().getOutputVariables();
@@ -148,7 +149,7 @@ public class CrossJoinWithArrayContainsToInnerJoin
                 ImmutableMap.of(arrayDistinctVariable, ImmutableList.of(unnestVariable)),
                 Optional.empty());
 
-        JoinNode.EquiJoinClause equiJoinClause = arrayAtLeftInput ? new JoinNode.EquiJoinClause(unnestVariable, elementVar) : new JoinNode.EquiJoinClause(elementVar, unnestVariable);
+        CanonicalJoinNode.EquiJoinClause equiJoinClause = arrayAtLeftInput ? new CanonicalJoinNode.EquiJoinClause(unnestVariable, elementVar) : new CanonicalJoinNode.EquiJoinClause(elementVar, unnestVariable);
 
         JoinNode newJoinNode = new JoinNode(joinNode.getSourceLocation(),
                 context.getIdAllocator().getNextId(),

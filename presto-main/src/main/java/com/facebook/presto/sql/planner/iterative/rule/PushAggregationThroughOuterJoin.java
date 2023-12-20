@@ -33,6 +33,7 @@ import com.facebook.presto.spi.plan.ValuesNode;
 import com.facebook.presto.spi.relation.CallExpression;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.iterative.Lookup;
 import com.facebook.presto.sql.planner.iterative.Rule;
 import com.facebook.presto.sql.planner.plan.JoinNode;
@@ -134,14 +135,14 @@ public class PushAggregationThroughOuterJoin
         JoinNode join = captures.get(JOIN);
 
         if (join.getFilter().isPresent()
-                || !(join.getType() == JoinNode.Type.LEFT || join.getType() == JoinNode.Type.RIGHT)
+                || !(join.getType() == CanonicalJoinNode.Type.LEFT || join.getType() == CanonicalJoinNode.Type.RIGHT)
                 || !groupsOnAllColumns(aggregation, getOuterTable(join).getOutputVariables())
                 || !isDistinct(context.getLookup().resolve(getOuterTable(join)), context.getLookup()::resolve)) {
             return Result.empty();
         }
 
         List<VariableReferenceExpression> groupingKeys = join.getCriteria().stream()
-                .map(join.getType() == JoinNode.Type.RIGHT ? JoinNode.EquiJoinClause::getLeft : JoinNode.EquiJoinClause::getRight)
+                .map(join.getType() == CanonicalJoinNode.Type.RIGHT ? CanonicalJoinNode.EquiJoinClause::getLeft : CanonicalJoinNode.EquiJoinClause::getRight)
                 .collect(toImmutableList());
         AggregationNode rewrittenAggregation = new AggregationNode(
                 aggregation.getSourceLocation(),
@@ -156,7 +157,7 @@ public class PushAggregationThroughOuterJoin
                 aggregation.getAggregationId());
 
         JoinNode rewrittenJoin;
-        if (join.getType() == JoinNode.Type.LEFT) {
+        if (join.getType() == CanonicalJoinNode.Type.LEFT) {
             rewrittenJoin = new JoinNode(
                     join.getSourceLocation(),
                     join.getId(),
@@ -203,9 +204,9 @@ public class PushAggregationThroughOuterJoin
 
     private static PlanNode getInnerTable(JoinNode join)
     {
-        checkState(join.getType() == JoinNode.Type.LEFT || join.getType() == JoinNode.Type.RIGHT, "expected LEFT or RIGHT JOIN");
+        checkState(join.getType() == CanonicalJoinNode.Type.LEFT || join.getType() == CanonicalJoinNode.Type.RIGHT, "expected LEFT or RIGHT JOIN");
         PlanNode innerNode;
-        if (join.getType().equals(JoinNode.Type.LEFT)) {
+        if (join.getType().equals(CanonicalJoinNode.Type.LEFT)) {
             innerNode = join.getRight();
         }
         else {
@@ -216,9 +217,9 @@ public class PushAggregationThroughOuterJoin
 
     private static PlanNode getOuterTable(JoinNode join)
     {
-        checkState(join.getType() == JoinNode.Type.LEFT || join.getType() == JoinNode.Type.RIGHT, "expected LEFT or RIGHT JOIN");
+        checkState(join.getType() == CanonicalJoinNode.Type.LEFT || join.getType() == CanonicalJoinNode.Type.RIGHT, "expected LEFT or RIGHT JOIN");
         PlanNode outerNode;
-        if (join.getType().equals(JoinNode.Type.LEFT)) {
+        if (join.getType().equals(CanonicalJoinNode.Type.LEFT)) {
             outerNode = join.getLeft();
         }
         else {
@@ -282,7 +283,7 @@ public class PushAggregationThroughOuterJoin
             finalJoinNode = new JoinNode(
                 outerJoin.getSourceLocation(),
                 idAllocator.getNextId(),
-                JoinNode.Type.INNER,
+                CanonicalJoinNode.Type.INNER,
                 outerJoin,
                 aggregationOverNull,
                 ImmutableList.of(),

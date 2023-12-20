@@ -23,6 +23,7 @@ import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.plan.TableScanNode;
 import com.facebook.presto.spi.plan.ValuesNode;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.Partitioning;
 import com.facebook.presto.sql.planner.PartitioningScheme;
 import com.facebook.presto.sql.planner.PlanFragment;
@@ -153,7 +154,7 @@ public class TestGraphvizPrinter
         PlanNode node = new JoinNode(
                 Optional.empty(),
                 new PlanNodeId("join"),
-                JoinNode.Type.INNER,
+                CanonicalJoinNode.Type.INNER,
                 TEST_TABLE_SCAN_NODE, //Left : Probe side
                 valuesNode, //Right : Build side
                 Collections.emptyList(), //No Criteria

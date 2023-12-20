@@ -40,6 +40,7 @@ import com.facebook.presto.spi.relation.ConstantExpression;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.parser.SqlParser;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.PartitioningHandle;
 import com.facebook.presto.sql.planner.RowExpressionInterpreter;
 import com.facebook.presto.sql.planner.TypeProvider;
@@ -864,7 +865,7 @@ public class PropertyDerivations
         }
     }
 
-    static boolean spillPossible(Session session, JoinNode.Type joinType)
+    static boolean spillPossible(Session session, CanonicalJoinNode.Type joinType)
     {
         if (!isSpillEnabled(session) || !isJoinSpillingEnabled(session)) {
             return false;
@@ -894,7 +895,7 @@ public class PropertyDerivations
     // Used to filter columns that are not exposed by join node
     // Or, if they are part of the equalities, to translate them
     // to the other symbol if that's exposed, instead.
-    public static Optional<VariableReferenceExpression> filterOrRewrite(Collection<VariableReferenceExpression> columns, List<JoinNode.EquiJoinClause> equalities, VariableReferenceExpression column)
+    public static Optional<VariableReferenceExpression> filterOrRewrite(Collection<VariableReferenceExpression> columns, List<CanonicalJoinNode.EquiJoinClause> equalities, VariableReferenceExpression column)
     {
         // symbol is exposed directly, so no translation needed
         if (columns.contains(column)) {
@@ -903,7 +904,7 @@ public class PropertyDerivations
 
         // if the column is part of the equality conditions and its counterpart
         // is exposed, use that, instead
-        for (JoinNode.EquiJoinClause equality : equalities) {
+        for (CanonicalJoinNode.EquiJoinClause equality : equalities) {
             if (equality.getLeft().equals(column) && columns.contains(equality.getRight())) {
                 return Optional.of(equality.getRight());
             }

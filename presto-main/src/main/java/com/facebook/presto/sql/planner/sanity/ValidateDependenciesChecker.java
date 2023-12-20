@@ -39,6 +39,7 @@ import com.facebook.presto.spi.plan.ValuesNode;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.parser.SqlParser;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.TypeProvider;
 import com.facebook.presto.sql.planner.VariablesExtractor;
 import com.facebook.presto.sql.planner.optimizations.WindowNodeUtil;
@@ -395,7 +396,7 @@ public final class ValidateDependenciesChecker
                     .addAll(rightInputs)
                     .build();
 
-            for (JoinNode.EquiJoinClause clause : node.getCriteria()) {
+            for (CanonicalJoinNode.EquiJoinClause clause : node.getCriteria()) {
                 checkArgument(leftInputs.contains(clause.getLeft()), "Symbol from join clause (%s) not in left source (%s)", clause.getLeft(), node.getLeft().getOutputVariables());
                 checkArgument(rightInputs.contains(clause.getRight()), "Symbol from join clause (%s) not in right source (%s)", clause.getRight(), node.getRight().getOutputVariables());
             }
@@ -473,7 +474,7 @@ public final class ValidateDependenciesChecker
                     .addAll(rightInputs)
                     .build();
 
-            for (JoinNode.EquiJoinClause clause : node.getCriteria()) {
+            for (CanonicalJoinNode.EquiJoinClause clause : node.getCriteria()) {
                 checkArgument(leftInputs.contains(clause.getLeft()), "Symbol from join clause (%s) not in left source (%s)", clause.getLeft(), node.getLeft().getOutputVariables());
                 checkArgument(rightInputs.contains(clause.getRight()), "Symbol from join clause (%s) not in right source (%s)", clause.getRight(), node.getRight().getOutputVariables());
             }

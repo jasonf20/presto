@@ -23,6 +23,7 @@ import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.plan.TableScanNode;
 import com.facebook.presto.spi.plan.UnionNode;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.Partitioning;
 import com.facebook.presto.sql.planner.PartitioningScheme;
 import com.facebook.presto.sql.planner.PlanFragment;
@@ -44,13 +45,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static com.facebook.presto.common.type.BigintType.BIGINT;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.SystemPartitioningHandle.SINGLE_DISTRIBUTION;
 import static com.facebook.presto.sql.planner.SystemPartitioningHandle.SOURCE_DISTRIBUTION;
 import static com.facebook.presto.sql.planner.plan.ExchangeNode.Type.REPARTITION;
 import static com.facebook.presto.sql.planner.plan.ExchangeNode.Type.REPLICATE;
 import static com.facebook.presto.sql.planner.plan.JoinNode.DistributionType.REPLICATED;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.RIGHT;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.testng.Assert.assertEquals;
 
@@ -226,7 +227,7 @@ public class TestPhasedExecutionSchedule
         return createFragment(join);
     }
 
-    private static PlanFragment createJoinPlanFragment(JoinNode.Type joinType, String name, PlanFragment buildFragment, PlanFragment probeFragment)
+    private static PlanFragment createJoinPlanFragment(CanonicalJoinNode.Type joinType, String name, PlanFragment buildFragment, PlanFragment probeFragment)
     {
         RemoteSourceNode probe = new RemoteSourceNode(Optional.empty(), new PlanNodeId("probe_id"), probeFragment.getId(), ImmutableList.of(), false, Optional.empty(), REPARTITION);
         RemoteSourceNode build = new RemoteSourceNode(Optional.empty(), new PlanNodeId("build_id"), buildFragment.getId(), ImmutableList.of(), false, Optional.empty(), REPARTITION);

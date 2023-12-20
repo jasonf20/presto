@@ -53,6 +53,7 @@ import com.facebook.presto.spi.relation.LambdaDefinitionExpression;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.SpecialFormExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.TypeProvider;
 import com.facebook.presto.sql.planner.plan.ApplyNode;
 import com.facebook.presto.sql.planner.plan.ExplainAnalyzeNode;
@@ -259,10 +260,10 @@ public class PushdownSubfields
         public PlanNode visitJoin(JoinNode node, RewriteContext<Context> context)
         {
             node.getCriteria().stream()
-                    .map(JoinNode.EquiJoinClause::getLeft)
+                    .map(CanonicalJoinNode.EquiJoinClause::getLeft)
                     .forEach(context.get().variables::add);
             node.getCriteria().stream()
-                    .map(JoinNode.EquiJoinClause::getRight)
+                    .map(CanonicalJoinNode.EquiJoinClause::getRight)
                     .forEach(context.get().variables::add);
 
             node.getFilter()

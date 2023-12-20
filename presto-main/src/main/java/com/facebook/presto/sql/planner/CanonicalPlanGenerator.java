@@ -271,12 +271,12 @@ public class CanonicalPlanGenerator
         if (strategy == DEFAULT) {
             return Optional.empty();
         }
-        if (node.getType().equals(JoinNode.Type.RIGHT)) {
+        if (node.getType().equals(CanonicalJoinNode.Type.RIGHT)) {
             return visitJoin(node.flipChildren(), context);
         }
         List<PlanNode> sources = new ArrayList<>();
         ImmutableList.Builder<RowExpression> allFilters = ImmutableList.builder();
-        ImmutableList.Builder<JoinNode.EquiJoinClause> criterias = ImmutableList.builder();
+        ImmutableList.Builder<CanonicalJoinNode.EquiJoinClause> criterias = ImmutableList.builder();
         Stack<JoinNode> stack = new Stack<>();
 
         stack.push(node);
@@ -288,7 +288,7 @@ public class CanonicalPlanGenerator
             if (top.getFilter().isPresent()) {
                 List<RowExpression> filters = extractConjuncts(top.getFilter().get());
                 filters.forEach(filter -> {
-                    Optional<JoinNode.EquiJoinClause> criteria = toEquiJoinClause(filter);
+                    Optional<CanonicalJoinNode.EquiJoinClause> criteria = toEquiJoinClause(filter);
                     criteria.ifPresent(criterias::add);
                     allFilters.add(filter);
                 });
@@ -306,7 +306,7 @@ public class CanonicalPlanGenerator
         }
 
         // Sort sources if all are INNER, or full outer join of 2 nodes
-        if (shouldMergeJoinNodes(node.getType()) || (node.getType().equals(JoinNode.Type.FULL) && sources.size() == 2)) {
+        if (shouldMergeJoinNodes(node.getType()) || (node.getType().equals(CanonicalJoinNode.Type.FULL) && sources.size() == 2)) {
             Optional<List<Integer>> sourceIndexes = orderSources(sources);
             if (!sourceIndexes.isPresent()) {
                 return Optional.empty();
@@ -322,9 +322,9 @@ public class CanonicalPlanGenerator
             }
             newSources.add(newSource.get());
         }
-        Set<JoinNode.EquiJoinClause> newCriterias = criterias.build().stream()
+        Set<CanonicalJoinNode.EquiJoinClause> newCriterias = criterias.build().stream()
                 .map(criteria -> canonicalize(criteria, context))
-                .sorted(comparing(JoinNode.EquiJoinClause::toString))
+                .sorted(comparing(CanonicalJoinNode.EquiJoinClause::toString))
                 .collect(toCollection(LinkedHashSet::new));
         Set<RowExpression> newFilters = allFilters.build().stream()
                 .map(filter -> inlineAndCanonicalize(context.getExpressions(), filter))
@@ -1134,9 +1134,9 @@ public class CanonicalPlanGenerator
         return Optional.of(canonicalPlan);
     }
 
-    private boolean shouldMergeJoinNodes(JoinNode.Type type)
+    private boolean shouldMergeJoinNodes(CanonicalJoinNode.Type type)
     {
-        return type.equals(JoinNode.Type.INNER);
+        return type.equals(CanonicalJoinNode.Type.INNER);
     }
 
     private VariableReferenceExpression rename(VariableReferenceExpression variable, String nameHint, Context context)
@@ -1156,14 +1156,14 @@ public class CanonicalPlanGenerator
         }
     }
 
-    private static JoinNode.EquiJoinClause canonicalize(JoinNode.EquiJoinClause criteria, Context context)
+    private static CanonicalJoinNode.EquiJoinClause canonicalize(CanonicalJoinNode.EquiJoinClause criteria, Context context)
     {
         VariableReferenceExpression left = inlineAndCanonicalize(context.getExpressions(), criteria.getLeft());
         VariableReferenceExpression right = inlineAndCanonicalize(context.getExpressions(), criteria.getRight());
-        return left.compareTo(right) > 0 ? new JoinNode.EquiJoinClause(left, right) : new JoinNode.EquiJoinClause(right, left);
+        return left.compareTo(right) > 0 ? new CanonicalJoinNode.EquiJoinClause(left, right) : new CanonicalJoinNode.EquiJoinClause(right, left);
     }
 
-    private static Optional<JoinNode.EquiJoinClause> toEquiJoinClause(RowExpression expression)
+    private static Optional<CanonicalJoinNode.EquiJoinClause> toEquiJoinClause(RowExpression expression)
     {
         if (!(expression instanceof CallExpression)) {
             return Optional.empty();
@@ -1178,7 +1178,7 @@ public class CanonicalPlanGenerator
             return Optional.empty();
         }
 
-        return Optional.of(new JoinNode.EquiJoinClause(
+        return Optional.of(new CanonicalJoinNode.EquiJoinClause(
                 (VariableReferenceExpression) callExpression.getArguments().get(0),
                 (VariableReferenceExpression) callExpression.getArguments().get(1)));
     }

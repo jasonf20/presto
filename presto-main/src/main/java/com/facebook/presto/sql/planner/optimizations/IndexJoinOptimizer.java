@@ -30,6 +30,7 @@ import com.facebook.presto.spi.plan.TableScanNode;
 import com.facebook.presto.spi.relation.DomainTranslator.ExtractionResult;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.TypeProvider;
 import com.facebook.presto.sql.planner.plan.IndexJoinNode;
 import com.facebook.presto.sql.planner.plan.IndexSourceNode;
@@ -117,8 +118,8 @@ public class IndexJoinOptimizer
             PlanNode rightRewritten = context.rewrite(node.getRight());
 
             if (!node.getCriteria().isEmpty()) { // Index join only possible with JOIN criteria
-                List<VariableReferenceExpression> leftJoinVariables = Lists.transform(node.getCriteria(), JoinNode.EquiJoinClause::getLeft);
-                List<VariableReferenceExpression> rightJoinVariables = Lists.transform(node.getCriteria(), JoinNode.EquiJoinClause::getRight);
+                List<VariableReferenceExpression> leftJoinVariables = Lists.transform(node.getCriteria(), CanonicalJoinNode.EquiJoinClause::getLeft);
+                List<VariableReferenceExpression> rightJoinVariables = Lists.transform(node.getCriteria(), CanonicalJoinNode.EquiJoinClause::getRight);
 
                 Optional<PlanNode> leftIndexCandidate = IndexSourceRewriter.rewriteWithIndex(
                         leftRewritten,

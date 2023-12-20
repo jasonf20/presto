@@ -37,8 +37,8 @@ import java.nio.file.Paths;
 import java.util.stream.Stream;
 
 import static com.facebook.presto.sql.Optimizer.PlanStage.OPTIMIZED_AND_VALIDATED;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
 import static com.facebook.presto.sql.planner.plan.JoinNode.DistributionType.REPLICATED;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
 import static com.facebook.presto.testing.TestngUtils.toDataProvider;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;

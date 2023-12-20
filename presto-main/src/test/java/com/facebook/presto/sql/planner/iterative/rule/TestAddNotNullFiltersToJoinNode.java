@@ -44,14 +44,14 @@ import static com.facebook.presto.common.type.BigintType.BIGINT;
 import static com.facebook.presto.metadata.FunctionAndTypeManager.createTestFunctionAndTypeManager;
 import static com.facebook.presto.sql.analyzer.FeaturesConfig.JoinNotNullInferenceStrategy.INFER_FROM_STANDARD_OPERATORS;
 import static com.facebook.presto.sql.analyzer.FeaturesConfig.JoinNotNullInferenceStrategy.USE_FUNCTION_METADATA;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.LEFT;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.anyTree;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.equiJoinClause;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.filter;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.join;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.tableScan;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.LEFT;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.relational.Expressions.variable;
 import static com.facebook.presto.testing.assertions.Assert.assertEquals;
 

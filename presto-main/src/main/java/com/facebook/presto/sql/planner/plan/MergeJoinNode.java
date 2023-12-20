@@ -18,6 +18,7 @@ import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -34,10 +35,10 @@ import static java.util.Objects.requireNonNull;
 public class MergeJoinNode
         extends InternalPlanNode
 {
-    private final JoinNode.Type type;
+    private final CanonicalJoinNode.Type type;
     private final PlanNode left;
     private final PlanNode right;
-    private final List<JoinNode.EquiJoinClause> criteria;
+    private final List<CanonicalJoinNode.EquiJoinClause> criteria;
     private final Optional<RowExpression> filter;
     private final List<VariableReferenceExpression> outputVariables;
     private final Optional<VariableReferenceExpression> leftHashVariable;
@@ -47,10 +48,10 @@ public class MergeJoinNode
     public MergeJoinNode(
             Optional<SourceLocation> sourceLocation,
             @JsonProperty ("id") PlanNodeId id,
-            @JsonProperty("type") JoinNode.Type type,
+            @JsonProperty("type") CanonicalJoinNode.Type type,
             @JsonProperty("left") PlanNode left,
             @JsonProperty("right") PlanNode right,
-            @JsonProperty("criteria") List<JoinNode.EquiJoinClause> criteria,
+            @JsonProperty("criteria") List<CanonicalJoinNode.EquiJoinClause> criteria,
             @JsonProperty("outputVariables") List<VariableReferenceExpression> outputVariables,
             @JsonProperty("filter") Optional<RowExpression> filter,
             @JsonProperty("leftHashVariable") Optional<VariableReferenceExpression> leftHashVariable,
@@ -63,10 +64,10 @@ public class MergeJoinNode
             Optional<SourceLocation> sourceLocation,
             PlanNodeId id,
             Optional<PlanNode> statsEquivalentPlanNode,
-            JoinNode.Type type,
+            CanonicalJoinNode.Type type,
             PlanNode left,
             PlanNode right,
-            List<JoinNode.EquiJoinClause> criteria,
+            List<CanonicalJoinNode.EquiJoinClause> criteria,
             List<VariableReferenceExpression> outputVariables,
             Optional<RowExpression> filter,
             Optional<VariableReferenceExpression> leftHashVariable,
@@ -84,7 +85,7 @@ public class MergeJoinNode
     }
 
     @JsonProperty
-    public JoinNode.Type getType()
+    public CanonicalJoinNode.Type getType()
     {
         return type;
     }
@@ -102,7 +103,7 @@ public class MergeJoinNode
     }
 
     @JsonProperty
-    public List<JoinNode.EquiJoinClause> getCriteria()
+    public List<CanonicalJoinNode.EquiJoinClause> getCriteria()
     {
         return criteria;
     }

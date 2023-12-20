@@ -82,6 +82,9 @@ import static com.facebook.presto.sql.Optimizer.PlanStage.OPTIMIZED_AND_VALIDATE
 import static com.facebook.presto.sql.TestExpressionInterpreter.AVG_UDAF_CPP;
 import static com.facebook.presto.sql.TestExpressionInterpreter.SQUARE_UDF_CPP;
 import static com.facebook.presto.sql.analyzer.FeaturesConfig.JoinReorderingStrategy.ELIMINATE_CROSS_JOINS;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.LEFT;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.aggregation;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.any;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.anyNot;
@@ -122,9 +125,6 @@ import static com.facebook.presto.sql.planner.plan.ExchangeNode.Type.REPARTITION
 import static com.facebook.presto.sql.planner.plan.ExchangeNode.Type.REPLICATE;
 import static com.facebook.presto.sql.planner.plan.JoinNode.DistributionType.PARTITIONED;
 import static com.facebook.presto.sql.planner.plan.JoinNode.DistributionType.REPLICATED;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.LEFT;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.tree.SortItem.NullOrdering.LAST;
 import static com.facebook.presto.sql.tree.SortItem.Ordering.ASCENDING;
 import static com.facebook.presto.sql.tree.SortItem.Ordering.DESCENDING;

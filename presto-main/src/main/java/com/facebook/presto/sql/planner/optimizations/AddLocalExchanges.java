@@ -33,6 +33,7 @@ import com.facebook.presto.spi.plan.TopNNode;
 import com.facebook.presto.spi.plan.UnionNode;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.parser.SqlParser;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.Partitioning;
 import com.facebook.presto.sql.planner.PartitioningScheme;
 import com.facebook.presto.sql.planner.TypeProvider;
@@ -773,7 +774,7 @@ public class AddLocalExchanges
 
             // this build consumes the input completely, so we do not pass through parent preferences
             List<VariableReferenceExpression> buildHashVariables = node.getCriteria().stream()
-                    .map(JoinNode.EquiJoinClause::getRight)
+                    .map(CanonicalJoinNode.EquiJoinClause::getRight)
                     .collect(toImmutableList());
             StreamPreferredProperties buildPreference;
             if (getTaskConcurrency(session) > 1) {

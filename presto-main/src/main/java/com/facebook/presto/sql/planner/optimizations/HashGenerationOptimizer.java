@@ -31,6 +31,7 @@ import com.facebook.presto.spi.plan.UnionNode;
 import com.facebook.presto.spi.relation.CallExpression;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.PartitioningScheme;
 import com.facebook.presto.sql.planner.TypeProvider;
 import com.facebook.presto.sql.planner.plan.ApplyNode;
@@ -71,15 +72,15 @@ import static com.facebook.presto.SystemSessionProperties.skipHashGenerationForJ
 import static com.facebook.presto.common.type.BigintType.BIGINT;
 import static com.facebook.presto.spi.plan.ProjectNode.Locality.LOCAL;
 import static com.facebook.presto.spi.plan.ProjectNode.Locality.REMOTE;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.LEFT;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.PlannerUtils.HASH_CODE;
 import static com.facebook.presto.sql.planner.PlannerUtils.INITIAL_HASH_VALUE;
 import static com.facebook.presto.sql.planner.PlannerUtils.orNullHashCode;
 import static com.facebook.presto.sql.planner.SystemPartitioningHandle.FIXED_HASH_DISTRIBUTION;
 import static com.facebook.presto.sql.planner.optimizations.SetOperationNodeUtils.fromListMultimap;
 import static com.facebook.presto.sql.planner.plan.ChildReplacer.replaceChildren;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.LEFT;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.relational.Expressions.call;
 import static com.facebook.presto.sql.relational.Expressions.constant;
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -343,7 +344,7 @@ public class HashGenerationOptimizer
         @Override
         public PlanWithProperties visitJoin(JoinNode node, HashComputationSet parentPreference)
         {
-            List<JoinNode.EquiJoinClause> clauses = node.getCriteria();
+            List<CanonicalJoinNode.EquiJoinClause> clauses = node.getCriteria();
             if (clauses.isEmpty()) {
                 // join does not pass through preferred hash variables since they take more memory and since
                 // the join node filters, may take more compute
@@ -357,14 +358,14 @@ public class HashGenerationOptimizer
 
             // join does not pass through preferred hash variables since they take more memory and since
             // the join node filters, may take more compute
-            Optional<HashComputation> leftHashComputation = computeHash(Lists.transform(clauses, JoinNode.EquiJoinClause::getLeft), functionAndTypeManager);
+            Optional<HashComputation> leftHashComputation = computeHash(Lists.transform(clauses, CanonicalJoinNode.EquiJoinClause::getLeft), functionAndTypeManager);
             if (skipHashGenerationForJoinWithTableScanInput(session) && skipHashComputeForJoinInput(node.getLeft(), leftHashComputation, parentPreference)) {
                 leftHashComputation = Optional.empty();
             }
             PlanWithProperties left = planAndEnforce(node.getLeft(), new HashComputationSet(leftHashComputation), true, new HashComputationSet(leftHashComputation));
             Optional<VariableReferenceExpression> leftHashVariable = leftHashComputation.isPresent() ? Optional.of(left.getRequiredHashVariable(leftHashComputation.get())) : Optional.empty();
 
-            Optional<HashComputation> rightHashComputation = computeHash(Lists.transform(clauses, JoinNode.EquiJoinClause::getRight), functionAndTypeManager);
+            Optional<HashComputation> rightHashComputation = computeHash(Lists.transform(clauses, CanonicalJoinNode.EquiJoinClause::getRight), functionAndTypeManager);
             if (skipHashGenerationForJoinWithTableScanInput(session) && skipHashComputeForJoinInput(node.getRight(), rightHashComputation, parentPreference)) {
                 rightHashComputation = Optional.empty();
             }

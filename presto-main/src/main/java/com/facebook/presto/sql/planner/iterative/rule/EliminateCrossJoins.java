@@ -25,6 +25,7 @@ import com.facebook.presto.spi.plan.ProjectNode;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.analyzer.FeaturesConfig.JoinReorderingStrategy;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.iterative.Rule;
 import com.facebook.presto.sql.planner.optimizations.joins.JoinGraph;
 import com.facebook.presto.sql.planner.plan.JoinNode;
@@ -163,12 +164,12 @@ public class EliminateCrossJoins
             PlanNode rightNode = graph.getNode(joinOrder.get(i));
             alreadyJoinedNodes.add(rightNode.getId());
 
-            ImmutableList.Builder<JoinNode.EquiJoinClause> criteria = ImmutableList.builder();
+            ImmutableList.Builder<CanonicalJoinNode.EquiJoinClause> criteria = ImmutableList.builder();
 
             for (JoinGraph.Edge edge : graph.getEdges(rightNode)) {
                 PlanNode targetNode = edge.getTargetNode();
                 if (alreadyJoinedNodes.contains(targetNode.getId())) {
-                    criteria.add(new JoinNode.EquiJoinClause(
+                    criteria.add(new CanonicalJoinNode.EquiJoinClause(
                             edge.getTargetVariable(),
                             edge.getSourceVariable()));
                 }
@@ -177,7 +178,7 @@ public class EliminateCrossJoins
             result = new JoinNode(
                     result.getSourceLocation(),
                     idAllocator.getNextId(),
-                    JoinNode.Type.INNER,
+                    CanonicalJoinNode.Type.INNER,
                     result,
                     rightNode,
                     criteria.build(),

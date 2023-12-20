@@ -60,6 +60,7 @@ import com.facebook.presto.spi.relation.CallExpression;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.InterpretedFunctionInvoker;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.Partitioning;
 import com.facebook.presto.sql.planner.PartitioningScheme;
 import com.facebook.presto.sql.planner.PlanFragment;
@@ -502,7 +503,7 @@ public class PlanPrinter
         public Void visitJoin(JoinNode node, Void context)
         {
             List<String> joinExpressions = new ArrayList<>();
-            for (JoinNode.EquiJoinClause clause : node.getCriteria()) {
+            for (CanonicalJoinNode.EquiJoinClause clause : node.getCriteria()) {
                 joinExpressions.add(JoinNodeUtils.toExpression(clause).toString());
             }
             node.getFilter().map(formatter::apply).ifPresent(joinExpressions::add);
@@ -602,7 +603,7 @@ public class PlanPrinter
         public Void visitMergeJoin(MergeJoinNode node, Void context)
         {
             List<String> joinExpressions = new ArrayList<>();
-            for (JoinNode.EquiJoinClause clause : node.getCriteria()) {
+            for (CanonicalJoinNode.EquiJoinClause clause : node.getCriteria()) {
                 joinExpressions.add(JoinNodeUtils.toExpression(clause).toString());
             }
             node.getFilter().map(formatter::apply).ifPresent(joinExpressions::add);

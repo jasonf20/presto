@@ -24,6 +24,7 @@ import static com.facebook.presto.SystemSessionProperties.JOIN_REORDERING_STRATE
 import static com.facebook.presto.SystemSessionProperties.SKIP_HASH_GENERATION_FOR_JOIN_WITH_TABLE_SCAN_INPUT;
 import static com.facebook.presto.sql.analyzer.FeaturesConfig.JoinDistributionType.BROADCAST;
 import static com.facebook.presto.sql.analyzer.FeaturesConfig.JoinReorderingStrategy.ELIMINATE_CROSS_JOINS;
+import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.anyTree;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.equiJoinClause;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.exchange;
@@ -32,7 +33,6 @@ import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.projec
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.tableScan;
 import static com.facebook.presto.sql.planner.plan.ExchangeNode.Scope.REMOTE_STREAMING;
 import static com.facebook.presto.sql.planner.plan.ExchangeNode.Type.REPLICATE;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
 
 public class TestHashGenerationOptimizer
         extends BasePlanTest

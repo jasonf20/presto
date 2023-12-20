@@ -23,12 +23,13 @@ import com.facebook.presto.spi.plan.ProjectNode;
 import com.facebook.presto.spi.relation.InSubqueryExpression;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
+import com.facebook.presto.sql.planner.CanonicalJoinNode.EquiJoinClause;
 import com.facebook.presto.sql.planner.iterative.GroupReference;
 import com.facebook.presto.sql.planner.iterative.Rule;
 import com.facebook.presto.sql.planner.plan.ApplyNode;
 import com.facebook.presto.sql.planner.plan.AssignUniqueId;
 import com.facebook.presto.sql.planner.plan.JoinNode;
-import com.facebook.presto.sql.planner.plan.JoinNode.EquiJoinClause;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -127,7 +128,7 @@ public class TransformUncorrelatedInPredicateSubqueryToDistinctInnerJoin
         JoinNode innerJoin = new JoinNode(
                 applyNode.getSourceLocation(),
                 context.getIdAllocator().getNextId(),
-                JoinNode.Type.INNER,
+                CanonicalJoinNode.Type.INNER,
                 leftInput,
                 applyNode.getSubquery(),
                 ImmutableList.of(new EquiJoinClause(

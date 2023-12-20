@@ -20,6 +20,7 @@ import com.facebook.presto.matching.Pattern;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.TypeProvider;
 import com.facebook.presto.sql.planner.VariablesExtractor;
 import com.facebook.presto.sql.planner.iterative.Rule;
@@ -85,7 +86,7 @@ public class PushPartialAggregationThroughJoin
     {
         JoinNode joinNode = captures.get(JOIN_NODE);
 
-        if (joinNode.getType() != JoinNode.Type.INNER) {
+        if (joinNode.getType() != CanonicalJoinNode.Type.INNER) {
             return Result.empty();
         }
 
@@ -131,8 +132,8 @@ public class PushPartialAggregationThroughJoin
     private Set<VariableReferenceExpression> getJoinRequiredVariables(JoinNode node)
     {
         return Streams.concat(
-                node.getCriteria().stream().map(JoinNode.EquiJoinClause::getLeft),
-                node.getCriteria().stream().map(JoinNode.EquiJoinClause::getRight),
+                node.getCriteria().stream().map(CanonicalJoinNode.EquiJoinClause::getLeft),
+                node.getCriteria().stream().map(CanonicalJoinNode.EquiJoinClause::getRight),
                 node.getFilter().map(expression -> VariablesExtractor.extractUnique(expression)).orElse(ImmutableSet.of()).stream(),
                 node.getLeftHashVariable().map(ImmutableSet::of).orElse(ImmutableSet.of()).stream(),
                 node.getRightHashVariable().map(ImmutableSet::of).orElse(ImmutableSet.of()).stream())

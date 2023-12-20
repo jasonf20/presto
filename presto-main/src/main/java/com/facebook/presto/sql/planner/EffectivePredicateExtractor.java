@@ -338,7 +338,7 @@ public class EffectivePredicateExtractor
             }
         }
 
-        private RowExpression toRowExpression(JoinNode.EquiJoinClause equiJoinClause)
+        private RowExpression toRowExpression(CanonicalJoinNode.EquiJoinClause equiJoinClause)
         {
             return buildEqualsExpression(functionManger, equiJoinClause.getLeft(), equiJoinClause.getRight());
         }

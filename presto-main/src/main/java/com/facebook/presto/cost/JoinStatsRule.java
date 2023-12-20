@@ -17,10 +17,11 @@ import com.facebook.presto.Session;
 import com.facebook.presto.matching.Pattern;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
+import com.facebook.presto.sql.planner.CanonicalJoinNode.EquiJoinClause;
 import com.facebook.presto.sql.planner.TypeProvider;
 import com.facebook.presto.sql.planner.iterative.Lookup;
 import com.facebook.presto.sql.planner.plan.JoinNode;
-import com.facebook.presto.sql.planner.plan.JoinNode.EquiJoinClause;
 import com.facebook.presto.sql.tree.ComparisonExpression;
 import com.facebook.presto.sql.tree.SymbolReference;
 import com.facebook.presto.util.MoreMath;
@@ -414,10 +415,10 @@ public class JoinStatsRule
         return normalizer.normalize(builder.build());
     }
 
-    private List<JoinNode.EquiJoinClause> flippedCriteria(JoinNode node)
+    private List<EquiJoinClause> flippedCriteria(JoinNode node)
     {
         return node.getCriteria().stream()
-                .map(EquiJoinClause::flip)
+                .map(CanonicalJoinNode.EquiJoinClause::flip)
                 .collect(toImmutableList());
     }
 }

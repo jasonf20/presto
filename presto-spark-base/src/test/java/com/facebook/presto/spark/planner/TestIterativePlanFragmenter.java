@@ -59,6 +59,7 @@ import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.spi.security.AllowAllAccessControl;
 import com.facebook.presto.sql.analyzer.FeaturesConfig;
 import com.facebook.presto.sql.parser.SqlParser;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.NodePartitioningManager;
 import com.facebook.presto.sql.planner.PartitioningHandle;
 import com.facebook.presto.sql.planner.PartitioningProviderManager;
@@ -339,16 +340,16 @@ public class TestIterativePlanFragmenter
     private JoinNode join(String planNodeId, PlanNode left, PlanNode right, JoinNode.DistributionType distributionType, String... symbols)
     {
         checkArgument(symbols.length % 2 == 0);
-        ImmutableList.Builder<JoinNode.EquiJoinClause> criteria = ImmutableList.builder();
+        ImmutableList.Builder<CanonicalJoinNode.EquiJoinClause> criteria = ImmutableList.builder();
 
         for (int i = 0; i < symbols.length; i += 2) {
-            criteria.add(new JoinNode.EquiJoinClause(new VariableReferenceExpression(Optional.empty(), symbols[i], BIGINT), new VariableReferenceExpression(Optional.empty(), symbols[i + 1], BIGINT)));
+            criteria.add(new CanonicalJoinNode.EquiJoinClause(new VariableReferenceExpression(Optional.empty(), symbols[i], BIGINT), new VariableReferenceExpression(Optional.empty(), symbols[i + 1], BIGINT)));
         }
 
         return new JoinNode(
                 Optional.empty(),
                 new PlanNodeId(planNodeId),
-                JoinNode.Type.INNER,
+                CanonicalJoinNode.Type.INNER,
                 left,
                 right,
                 criteria.build(),

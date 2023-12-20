@@ -22,6 +22,7 @@ import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeIdAllocator;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.parser.SqlParser;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.TypeProvider;
 import com.facebook.presto.sql.planner.iterative.GroupReference;
 import com.facebook.presto.sql.planner.iterative.Lookup;
@@ -101,7 +102,7 @@ public class JoinSwappingUtils
 
         // Add additional localExchange if the new build side does not satisfy the partitioning conditions.
         List<VariableReferenceExpression> buildJoinVariables = swapped.getCriteria().stream()
-                .map(JoinNode.EquiJoinClause::getRight)
+                .map(CanonicalJoinNode.EquiJoinClause::getRight)
                 .collect(toImmutableList());
         PlanNode newRight = swapped.getRight();
         if (!checkBuildSidePropertySatisfied(swapped.getRight(), buildJoinVariables, metadata, parser, lookup, session, variableAllocator)) {

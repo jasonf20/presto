@@ -29,6 +29,7 @@ import com.facebook.presto.spi.plan.UnionNode;
 import com.facebook.presto.spi.plan.ValuesNode;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 
 import java.util.List;
 import java.util.Optional;
@@ -236,7 +237,7 @@ public class Patterns
 
     public static class Join
     {
-        public static Property<JoinNode, JoinNode.Type> type()
+        public static Property<JoinNode, CanonicalJoinNode.Type> type()
         {
             return property("type", JoinNode::getType);
         }

@@ -24,6 +24,7 @@ import com.facebook.presto.spi.plan.ProjectNode;
 import com.facebook.presto.spi.relation.CallExpression;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
+import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.planner.iterative.Rule;
 import com.facebook.presto.sql.planner.plan.JoinNode;
 import com.facebook.presto.sql.relational.FunctionResolution;
@@ -114,11 +115,11 @@ public class RemoveRedundantCastToVarcharInJoinClause
         ProjectNode leftProject = (ProjectNode) leftInput;
         ProjectNode rightProject = (ProjectNode) rightInput;
 
-        ImmutableList.Builder<JoinNode.EquiJoinClause> joinClauseBuilder = ImmutableList.builder();
+        ImmutableList.Builder<CanonicalJoinNode.EquiJoinClause> joinClauseBuilder = ImmutableList.builder();
         ImmutableMap.Builder<VariableReferenceExpression, RowExpression> newLeftAssignmentsBuilder = ImmutableMap.builder();
         ImmutableMap.Builder<VariableReferenceExpression, RowExpression> newRightAssignmentsBuilder = ImmutableMap.builder();
         boolean isChanged = false;
-        for (JoinNode.EquiJoinClause equiJoinClause : node.getCriteria()) {
+        for (CanonicalJoinNode.EquiJoinClause equiJoinClause : node.getCriteria()) {
             RowExpression leftProjectAssignment = leftProject.getAssignments().getMap().get(equiJoinClause.getLeft());
             RowExpression rightProjectAssignment = rightProject.getAssignments().getMap().get(equiJoinClause.getRight());
             if (!isSupportedCast(leftProjectAssignment) || !isSupportedCast(rightProjectAssignment)) {
@@ -140,7 +141,7 @@ public class RemoveRedundantCastToVarcharInJoinClause
             VariableReferenceExpression newRight = context.getVariableAllocator().newVariable(rightAssignment);
             newRightAssignmentsBuilder.put(newRight, rightAssignment);
 
-            joinClauseBuilder.add(new JoinNode.EquiJoinClause(newLeft, newRight));
+            joinClauseBuilder.add(new CanonicalJoinNode.EquiJoinClause(newLeft, newRight));
             isChanged = true;
         }
 
