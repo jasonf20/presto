@@ -28,6 +28,7 @@ import com.facebook.presto.spi.VariableAllocator;
 import com.facebook.presto.spi.constraints.TableConstraint;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.Assignments;
+import com.facebook.presto.spi.plan.CanonicalJoinNode;
 import com.facebook.presto.spi.plan.CteReferenceNode;
 import com.facebook.presto.spi.plan.ExceptNode;
 import com.facebook.presto.spi.plan.FilterNode;

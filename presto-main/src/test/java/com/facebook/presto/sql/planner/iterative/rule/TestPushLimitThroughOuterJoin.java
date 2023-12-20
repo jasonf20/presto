@@ -13,14 +13,14 @@
  */
 package com.facebook.presto.sql.planner.iterative.rule;
 
+import com.facebook.presto.spi.plan.CanonicalJoinNode.EquiJoinClause;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
-import com.facebook.presto.sql.planner.CanonicalJoinNode.EquiJoinClause;
 import com.facebook.presto.sql.planner.iterative.rule.test.BaseRuleTest;
 import com.google.common.collect.ImmutableList;
 import org.testng.annotations.Test;
 
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.FULL;
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.LEFT;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.FULL;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.LEFT;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.equiJoinClause;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.join;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.limit;

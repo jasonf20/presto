@@ -56,9 +56,9 @@ import static com.facebook.presto.hive.HiveSessionProperties.MATERIALIZED_VIEW_M
 import static com.facebook.presto.hive.TestHiveLogicalPlanner.replicateHiveMetastore;
 import static com.facebook.presto.hive.TestHiveLogicalPlanner.utf8Slices;
 import static com.facebook.presto.spi.plan.AggregationNode.Step.SINGLE;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.LEFT;
 import static com.facebook.presto.sql.analyzer.FeaturesConfig.JoinReorderingStrategy.ELIMINATE_CROSS_JOINS;
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.LEFT;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.aggregation;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.anyTree;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.constrainedTableScan;

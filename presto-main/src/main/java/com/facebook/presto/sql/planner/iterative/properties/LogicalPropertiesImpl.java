@@ -14,10 +14,10 @@
 package com.facebook.presto.sql.planner.iterative.properties;
 
 import com.facebook.presto.spi.plan.Assignments;
+import com.facebook.presto.spi.plan.CanonicalJoinNode;
 import com.facebook.presto.spi.plan.LogicalProperties;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
-import com.facebook.presto.sql.planner.CanonicalJoinNode;
 import com.facebook.presto.sql.relational.FunctionResolution;
 
 import java.util.ArrayList;
@@ -28,10 +28,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.FULL;
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.LEFT;
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.RIGHT;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.FULL;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.LEFT;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.iterative.properties.Key.getNormalizedKey;
 import static com.facebook.presto.sql.planner.iterative.properties.KeyProperty.combineKey;
 import static com.facebook.presto.sql.planner.iterative.properties.KeyProperty.combineKeys;

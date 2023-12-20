@@ -21,9 +21,9 @@ import org.testng.annotations.Test;
 import java.util.Optional;
 
 import static com.facebook.presto.SystemSessionProperties.INFER_INEQUALITY_PREDICATES;
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.LEFT;
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.RIGHT;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.LEFT;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.anyTree;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.equiJoinClause;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.filter;

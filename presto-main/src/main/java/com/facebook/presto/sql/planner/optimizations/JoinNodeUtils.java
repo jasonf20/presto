@@ -14,20 +14,20 @@
 package com.facebook.presto.sql.planner.optimizations;
 
 import com.facebook.presto.common.function.OperatorType;
+import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.CanonicalJoinNode.EquiJoinClause;
 import com.facebook.presto.spi.relation.RowExpression;
-import com.facebook.presto.sql.planner.CanonicalJoinNode;
-import com.facebook.presto.sql.planner.CanonicalJoinNode.EquiJoinClause;
 import com.facebook.presto.sql.relational.FunctionResolution;
 import com.facebook.presto.sql.tree.ComparisonExpression;
 import com.facebook.presto.sql.tree.Join;
 import com.google.common.collect.ImmutableList;
 
 import static com.facebook.presto.common.type.BooleanType.BOOLEAN;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.FULL;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.LEFT;
+import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.analyzer.ExpressionTreeUtils.createSymbolReference;
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.FULL;
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.INNER;
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.LEFT;
-import static com.facebook.presto.sql.planner.CanonicalJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.relational.Expressions.call;
 import static com.facebook.presto.sql.tree.ComparisonExpression.Operator.EQUAL;
 
