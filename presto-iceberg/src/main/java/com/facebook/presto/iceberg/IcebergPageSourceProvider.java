@@ -107,6 +107,7 @@ import javax.inject.Inject;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -763,7 +764,14 @@ public class IcebergPageSourceProvider
                     .reduce(RowPredicate::and);
         });
 
-        ConnectorPageSource dataSource = new IcebergPageSource(icebergColumns, partitionKeys, dataPageSource, deletePredicate);
+        HashMap<Integer, Object> syntheticValues = new HashMap<>();
+        for (IcebergColumnHandle icebergColumn : icebergColumns) {
+            if (icebergColumn.isPathColumn()) {
+                syntheticValues.put(icebergColumn.getColumnIdentity().getId(), utf8Slice(split.getPath()));
+            }
+        }
+
+        ConnectorPageSource dataSource = new IcebergPageSource(icebergColumns, syntheticValues, partitionKeys, dataPageSource, deletePredicate);
         if (split.getChangelogSplitInfo().isPresent()) {
             dataSource = new ChangelogPageSource(dataSource, split.getChangelogSplitInfo().get(), (List<IcebergColumnHandle>) (List<?>) desiredColumns, icebergColumns);
         }

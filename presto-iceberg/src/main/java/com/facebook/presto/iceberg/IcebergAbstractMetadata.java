@@ -102,8 +102,11 @@ import static com.facebook.presto.hive.MetadataUtils.getDiscretePredicates;
 import static com.facebook.presto.hive.MetadataUtils.getPredicate;
 import static com.facebook.presto.hive.MetadataUtils.getSubfieldPredicate;
 import static com.facebook.presto.iceberg.ExpressionConverter.toIcebergExpression;
+import static com.facebook.presto.iceberg.IcebergColumnHandle.pathColumnHandle;
+import static com.facebook.presto.iceberg.IcebergColumnHandle.pathColumnMetadata;
 import static com.facebook.presto.iceberg.IcebergColumnHandle.primitiveIcebergColumnHandle;
 import static com.facebook.presto.iceberg.IcebergErrorCode.ICEBERG_INVALID_SNAPSHOT_ID;
+import static com.facebook.presto.iceberg.IcebergMetadataColumn.FILE_PATH;
 import static com.facebook.presto.iceberg.IcebergSessionProperties.isPushdownFilterEnabled;
 import static com.facebook.presto.iceberg.IcebergTableProperties.FILE_FORMAT_PROPERTY;
 import static com.facebook.presto.iceberg.IcebergTableProperties.FORMAT_VERSION;
@@ -136,7 +139,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
-import static java.util.function.Function.identity;
 
 public abstract class IcebergAbstractMetadata
         implements ConnectorMetadata
@@ -316,11 +318,15 @@ public abstract class IcebergAbstractMetadata
     protected ConnectorTableMetadata getTableMetadata(ConnectorSession session, SchemaTableName table, IcebergTableName icebergTableName)
     {
         Table icebergTable = getIcebergTable(session, new SchemaTableName(table.getSchemaName(), icebergTableName.getTableName()));
-        List<ColumnMetadata> columns = getColumnMetadatas(icebergTable);
+        ImmutableList.Builder<ColumnMetadata> columns = ImmutableList.builder();
+        columns.addAll(getColumnMetadatas(icebergTable));
         if (icebergTableName.getTableType() == CHANGELOG) {
-            return ChangelogUtil.getChangelogTableMeta(table, typeManager, columns);
+            return ChangelogUtil.getChangelogTableMeta(table, typeManager, columns.build());
         }
-        return new ConnectorTableMetadata(table, columns, createMetadataProperties(icebergTable), getTableComment(icebergTable));
+        else {
+            columns.add(pathColumnMetadata());
+        }
+        return new ConnectorTableMetadata(table, columns.build(), createMetadataProperties(icebergTable), getTableComment(icebergTable));
     }
 
     @Override
@@ -614,8 +620,15 @@ public abstract class IcebergAbstractMetadata
         else {
             schema = icebergTable.schema();
         }
-        return getColumns(schema, icebergTable.spec(), typeManager).stream()
-                .collect(toImmutableMap(IcebergColumnHandle::getName, identity()));
+
+        ImmutableMap.Builder<String, ColumnHandle> columnHandles = ImmutableMap.builder();
+        for (IcebergColumnHandle columnHandle : getColumns(schema, icebergTable.spec(), typeManager)) {
+            columnHandles.put(columnHandle.getName(), columnHandle);
+        }
+        if (table.getTableName().getTableType() != CHANGELOG) {
+            columnHandles.put(FILE_PATH.getColumnName(), pathColumnHandle());
+        }
+        return columnHandles.build();
     }
 
     @Override
