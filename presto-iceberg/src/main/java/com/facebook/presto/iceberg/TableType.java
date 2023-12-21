@@ -22,5 +22,6 @@ public enum TableType
     PARTITIONS,
     FILES,
     PROPERTIES,
-    CHANGELOG
+    CHANGELOG,
+    EQUALITY_DELETES
 }
