@@ -19,6 +19,7 @@ import com.facebook.presto.spi.ConnectorPlanOptimizer;
 import com.facebook.presto.spi.VariableAllocator;
 import com.facebook.presto.spi.WarningCollector;
 import com.facebook.presto.spi.plan.AggregationNode;
+import com.facebook.presto.spi.plan.CanonicalJoinNode;
 import com.facebook.presto.spi.plan.CteConsumerNode;
 import com.facebook.presto.spi.plan.CteProducerNode;
 import com.facebook.presto.spi.plan.CteReferenceNode;
@@ -36,12 +37,15 @@ import com.facebook.presto.spi.plan.TopNNode;
 import com.facebook.presto.spi.plan.UnionNode;
 import com.facebook.presto.spi.plan.ValuesNode;
 import com.facebook.presto.sql.planner.TypeProvider;
+import com.facebook.presto.sql.planner.plan.JoinNode;
+import com.facebook.presto.sql.planner.plan.SimplePlanRewriter;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -146,6 +150,9 @@ public class ApplyConnectorOptimization
                             containsAll(ImmutableSet.copyOf(newNode.getOutputVariables()), node.getOutputVariables()),
                             "the connector optimizer from %s returns a node that does not cover all output before optimization",
                             connectorId);
+
+                    newNode = SimplePlanRewriter.rewriteWith(new CanonicalToInternalJoinRewriter(), newNode);
+
                     updates.put(node, newNode);
                 }
             }
@@ -291,5 +298,30 @@ public class ApplyConnectorOptimization
             }
         }
         return true;
+    }
+
+    private static class CanonicalToInternalJoinRewriter
+            extends SimplePlanRewriter<Void>
+    {
+        @Override
+        public PlanNode visitCanonicalJoinNode(CanonicalJoinNode node, RewriteContext<Void> context)
+        {
+            if (node.getType() == CanonicalJoinNode.Type.LEFT) {
+                return new JoinNode(node.getSourceLocation(),
+                        node.getId(),
+                        Optional.empty(),
+                        node.getType(),
+                        node.getSources().get(0),
+                        node.getSources().get(1),
+                        ImmutableList.copyOf(node.getCriteria()),
+                        node.getOutputVariables(),
+                        node.getFilters().stream().findFirst(), // TODO: Change to reduce
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Collections.emptyMap());
+            }
+            return super.visitCanonicalJoinNode(node, context);
+        }
     }
 }

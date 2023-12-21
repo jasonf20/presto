@@ -225,4 +225,10 @@ public class CanonicalJoinNode
             return format("%s = %s", left, right);
         }
     }
+
+    @Override
+    public <R, C> R accept(PlanVisitor<R, C> visitor, C context)
+    {
+        return visitor.visitCanonicalJoinNode(this, context);
+    }
 }
