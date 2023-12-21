@@ -34,6 +34,7 @@ import static com.facebook.presto.iceberg.ColumnIdentity.primitiveColumnIdentity
 import static com.facebook.presto.iceberg.IcebergColumnHandle.ColumnType.METADATA;
 import static com.facebook.presto.iceberg.IcebergColumnHandle.ColumnType.REGULAR;
 import static com.facebook.presto.iceberg.IcebergColumnHandle.ColumnType.SYNTHESIZED;
+import static com.facebook.presto.iceberg.IcebergMetadataColumn.DATA_SEQUENCE_NUMBER;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.FILE_PATH;
 import static com.facebook.presto.iceberg.TypeConverter.toPrestoType;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -165,18 +166,38 @@ public class IcebergColumnHandle
 
     public static IcebergColumnHandle pathColumnHandle()
     {
-        return new IcebergColumnHandle(
-                columIdentity(FILE_PATH),
-                FILE_PATH.getType(),
-                Optional.empty(),
-                METADATA);
+        return getIcebergColumnHandle(FILE_PATH);
     }
 
     public static ColumnMetadata pathColumnMetadata()
     {
+        return getColumnMetadata(FILE_PATH);
+    }
+
+    public static IcebergColumnHandle dataSequenceNumberColumnHandle()
+    {
+        return getIcebergColumnHandle(DATA_SEQUENCE_NUMBER);
+    }
+
+    private static IcebergColumnHandle getIcebergColumnHandle(IcebergMetadataColumn metadataColumn)
+    {
+        return new IcebergColumnHandle(
+                columIdentity(metadataColumn),
+                metadataColumn.getType(),
+                Optional.empty(),
+                METADATA);
+    }
+
+    public static ColumnMetadata dataSequenceNumberColumnMetadata()
+    {
+        return getColumnMetadata(DATA_SEQUENCE_NUMBER);
+    }
+
+    private static ColumnMetadata getColumnMetadata(IcebergMetadataColumn metadataColumn)
+    {
         return ColumnMetadata.builder()
-                .setName(FILE_PATH.getColumnName())
-                .setType(FILE_PATH.getType())
+                .setName(metadataColumn.getColumnName())
+                .setType(metadataColumn.getType())
                 .setHidden(true)
                 .build();
     }
@@ -189,6 +210,11 @@ public class IcebergColumnHandle
     public boolean isPathColumn()
     {
         return getColumnIdentity().getId() == FILE_PATH.getId();
+    }
+
+    public boolean isDataSequenceNumberColumn()
+    {
+        return getColumnIdentity().getId() == DATA_SEQUENCE_NUMBER.getId();
     }
 
     public static IcebergColumnHandle primitiveIcebergColumnHandle(int id, String name, Type type, Optional<String> comment)

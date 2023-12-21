@@ -73,7 +73,7 @@ public class IcebergPageSource
                 prefilledBlocks[outputIndex] = nativeValueToBlock(type, prefilledValue);
                 delegateIndexes[outputIndex] = -1;
             }
-            else if (column.isPathColumn()) {
+            else if (IcebergMetadataColumn.isMetadataColumnId(column.getId())) {
                 prefilledBlocks[outputIndex] = nativeValueToBlock(column.getType(), syntheticValues.get(column.getColumnIdentity().getId()));
                 delegateIndexes[outputIndex] = -1;
             }

@@ -769,6 +769,9 @@ public class IcebergPageSourceProvider
             if (icebergColumn.isPathColumn()) {
                 syntheticValues.put(icebergColumn.getColumnIdentity().getId(), utf8Slice(split.getPath()));
             }
+            else if (icebergColumn.isDataSequenceNumberColumn()) {
+                syntheticValues.put(icebergColumn.getColumnIdentity().getId(), split.getDataSequenceNumber());
+            }
         }
 
         ConnectorPageSource dataSource = new IcebergPageSource(icebergColumns, syntheticValues, partitionKeys, dataPageSource, deletePredicate);

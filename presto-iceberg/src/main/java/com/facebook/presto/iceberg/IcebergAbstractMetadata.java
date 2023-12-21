@@ -102,10 +102,13 @@ import static com.facebook.presto.hive.MetadataUtils.getDiscretePredicates;
 import static com.facebook.presto.hive.MetadataUtils.getPredicate;
 import static com.facebook.presto.hive.MetadataUtils.getSubfieldPredicate;
 import static com.facebook.presto.iceberg.ExpressionConverter.toIcebergExpression;
+import static com.facebook.presto.iceberg.IcebergColumnHandle.dataSequenceNumberColumnHandle;
+import static com.facebook.presto.iceberg.IcebergColumnHandle.dataSequenceNumberColumnMetadata;
 import static com.facebook.presto.iceberg.IcebergColumnHandle.pathColumnHandle;
 import static com.facebook.presto.iceberg.IcebergColumnHandle.pathColumnMetadata;
 import static com.facebook.presto.iceberg.IcebergColumnHandle.primitiveIcebergColumnHandle;
 import static com.facebook.presto.iceberg.IcebergErrorCode.ICEBERG_INVALID_SNAPSHOT_ID;
+import static com.facebook.presto.iceberg.IcebergMetadataColumn.DATA_SEQUENCE_NUMBER;
 import static com.facebook.presto.iceberg.IcebergMetadataColumn.FILE_PATH;
 import static com.facebook.presto.iceberg.IcebergSessionProperties.isPushdownFilterEnabled;
 import static com.facebook.presto.iceberg.IcebergTableProperties.FILE_FORMAT_PROPERTY;
@@ -325,6 +328,7 @@ public abstract class IcebergAbstractMetadata
         }
         else {
             columns.add(pathColumnMetadata());
+            columns.add(dataSequenceNumberColumnMetadata());
         }
         return new ConnectorTableMetadata(table, columns.build(), createMetadataProperties(icebergTable), getTableComment(icebergTable));
     }
@@ -627,6 +631,7 @@ public abstract class IcebergAbstractMetadata
         }
         if (table.getTableName().getTableType() != CHANGELOG) {
             columnHandles.put(FILE_PATH.getColumnName(), pathColumnHandle());
+            columnHandles.put(DATA_SEQUENCE_NUMBER.getColumnName(), dataSequenceNumberColumnHandle());
         }
         return columnHandles.build();
     }

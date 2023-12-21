@@ -42,6 +42,7 @@ import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.iceberg.BaseTable;
+import org.apache.iceberg.ContentFile;
 import org.apache.iceberg.ContentScanTask;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.FileFormat;
@@ -711,5 +712,13 @@ public final class IcebergUtil
         });
 
         return Collections.unmodifiableMap(partitionKeys);
+    }
+
+    public static long getDataSequenceNumber(ContentFile<?> file)
+    {
+        if (file.dataSequenceNumber() != null) {
+            return file.dataSequenceNumber();
+        }
+        return file.fileSequenceNumber();
     }
 }

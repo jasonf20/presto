@@ -13,6 +13,7 @@
  */
 package com.facebook.presto.iceberg;
 
+import com.facebook.presto.common.type.BigintType;
 import com.facebook.presto.common.type.Type;
 import com.facebook.presto.common.type.VarcharType;
 import org.apache.iceberg.MetadataColumns;
@@ -25,9 +26,10 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 public enum IcebergMetadataColumn
 {
     FILE_PATH(MetadataColumns.FILE_PATH.fieldId(), "$path", VarcharType.VARCHAR, ColumnIdentity.TypeCategory.PRIMITIVE),
+    DATA_SEQUENCE_NUMBER(Integer.MAX_VALUE - 1001, "$data_sequence_number", BigintType.BIGINT, ColumnIdentity.TypeCategory.PRIMITIVE),
     /**/;
 
-    private static final Set<Integer> COLUMNS_ID = Stream.of(values())
+    private static final Set<Integer> COLUMN_IDS = Stream.of(values())
             .map(IcebergMetadataColumn::getId)
             .collect(toImmutableSet());
     private final int id;
@@ -65,6 +67,6 @@ public enum IcebergMetadataColumn
 
     public static boolean isMetadataColumnId(int id)
     {
-        return COLUMNS_ID.contains(id);
+        return COLUMN_IDS.contains(id);
     }
 }
