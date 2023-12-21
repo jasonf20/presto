@@ -13,6 +13,7 @@
  */
 package com.facebook.presto.iceberg;
 
+import avro.shaded.com.google.common.collect.Iterators;
 import com.facebook.airlift.log.Logger;
 import com.facebook.presto.common.predicate.Domain;
 import com.facebook.presto.common.predicate.NullableValue;
@@ -45,6 +46,7 @@ import org.apache.iceberg.BaseTable;
 import org.apache.iceberg.ContentFile;
 import org.apache.iceberg.ContentScanTask;
 import org.apache.iceberg.DataFile;
+import org.apache.iceberg.DeleteFile;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.FileScanTask;
 import org.apache.iceberg.HistoryEntry;
@@ -60,6 +62,7 @@ import org.apache.iceberg.TableOperations;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.expressions.Expression;
 import org.apache.iceberg.io.CloseableIterable;
+import org.apache.iceberg.io.CloseableIterator;
 import org.apache.iceberg.io.LocationProvider;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.util.SnapshotUtil;
@@ -75,6 +78,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -685,6 +689,11 @@ public final class IcebergUtil
     {
         StructLike partition = scanTask.file().partition();
         PartitionSpec spec = scanTask.spec();
+        return getPartitionKeys(spec, partition);
+    }
+
+    public static Map<Integer, HivePartitionKey> getPartitionKeys(PartitionSpec spec, StructLike partition)
+    {
         Map<PartitionField, Integer> fieldToIndex = getIdentityPartitions(spec);
         Map<Integer, HivePartitionKey> partitionKeys = new HashMap<>();
 
@@ -712,6 +721,98 @@ public final class IcebergUtil
         });
 
         return Collections.unmodifiableMap(partitionKeys);
+    }
+
+//    public static CloseableIterable<DeleteFile> getDeleteFiles(Table table, long snapshot, TupleDomain<IcebergColumnHandle> filter)
+//    {
+//        Expression filterExpression = toIcebergExpression(filter);
+//        LoadingCache<Integer, ManifestEvaluator> evalCache =
+//                Caffeine.newBuilder()
+//                        .build(
+//                                specId -> {
+//                                    PartitionSpec spec = table.specs().get(specId);
+//                                    return ManifestEvaluator.forRowFilter(filterExpression, spec, false);
+//                                });
+//        List<ManifestFile> manifests = table.snapshot(snapshot)
+//                .deleteManifests(table.io())
+//                .stream()
+//                .filter(m -> evalCache.get(m.partitionSpecId()).eval(m))
+//                .collect(Collectors.toList());
+//
+//        return manifests.stream()
+//                .<CloseableIterable<DeleteFile>>map(manifest -> ManifestFiles
+//                        .readDeleteManifest(manifest, table.io(), table.specs())
+//                        .filterRows(filterExpression))
+//                .reduce((a, b) -> {
+//                    List<CloseableIterable<DeleteFile>> list = ImmutableList.of(a, b);
+//                    return CloseableIterable.concat(list);
+//                })
+//                .orElseGet(CloseableIterable::empty);
+//    }
+
+    public static CloseableIterable<DeleteFile> getDeleteFiles(Table table, long snapshot, TupleDomain<IcebergColumnHandle> filter)
+    {
+        Expression filterExpression = toIcebergExpression(filter);
+        CloseableIterator<FileScanTask> fileTasks = table.newScan().useSnapshot(snapshot).filter(filterExpression).planFiles().iterator();
+
+        return new CloseableIterable<DeleteFile>()
+        {
+            @Override
+            public void close()
+                    throws IOException
+            {
+                fileTasks.close();
+            }
+
+            @Override
+            public CloseableIterator<DeleteFile> iterator()
+            {
+                return new CloseableIterator<DeleteFile>()
+                {
+                    final Set<String> seenFiles = new HashSet<>();
+                    Iterator<DeleteFile> currentDeletes = Iterators.emptyIterator();
+
+                    DeleteFile currentFile;
+
+                    @Override
+                    public boolean hasNext()
+                    {
+                        return currentFile != null || advance();
+                    }
+
+                    private boolean advance()
+                    {
+                        currentFile = null;
+                        while (currentFile == null && (currentDeletes.hasNext() || fileTasks.hasNext())) {
+                            if (!currentDeletes.hasNext()) {
+                                currentDeletes = fileTasks.next().deletes().iterator();
+                            }
+                            DeleteFile item = currentDeletes.next();
+                            if (seenFiles.add(item.path().toString())) {
+                                currentFile = item;
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+
+                    @Override
+                    public DeleteFile next()
+                    {
+                        DeleteFile result = currentFile;
+                        advance();
+                        return result;
+                    }
+
+                    @Override
+                    public void close()
+                            throws IOException
+                    {
+                        fileTasks.close();
+                    }
+                };
+            }
+        };
     }
 
     public static long getDataSequenceNumber(ContentFile<?> file)

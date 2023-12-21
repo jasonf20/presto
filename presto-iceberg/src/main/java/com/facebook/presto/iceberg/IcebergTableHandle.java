@@ -84,6 +84,7 @@ public class IcebergTableHandle
     @JsonProperty
     public boolean isApplyEqualityDeletesDuringScan()
     {
+        //TODO: Consider removing this and using session param in split provider
         return applyEqualityDeletesDuringScan;
     }
 

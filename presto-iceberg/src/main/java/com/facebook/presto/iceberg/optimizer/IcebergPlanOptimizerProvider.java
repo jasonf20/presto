@@ -53,13 +53,12 @@ public class IcebergPlanOptimizerProvider
         requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
         requireNonNull(typeManager, "typeManager is null");
         this.planOptimizers = ImmutableSet.of(
-                new IcebergEqualityDeleteAsJoin(functionResolution, rowExpressionService, transactionManager, typeManager),
                 new IcebergPlanOptimizer(functionResolution, rowExpressionService, transactionManager),
                 new IcebergFilterPushdown(rowExpressionService, functionResolution, functionMetadataManager, transactionManager, resourceFactory, hdfsEnvironment, typeManager),
                 new IcebergParquetDereferencePushDown(transactionManager, rowExpressionService, typeManager));
         this.logicalPlanOptimizers = ImmutableSet.<ConnectorPlanOptimizer>builder()
-                .add(new IcebergEqualityDeleteAsJoin(functionResolution, rowExpressionService, transactionManager, typeManager))
                 .addAll(this.planOptimizers)
+                .add(new IcebergEqualityDeleteAsJoin(functionResolution, rowExpressionService, transactionManager, typeManager))
                 .build();
     }
 

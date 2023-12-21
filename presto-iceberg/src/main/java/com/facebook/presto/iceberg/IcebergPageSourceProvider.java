@@ -752,11 +752,17 @@ public class IcebergPageSourceProvider
         ConnectorPageSource dataPageSource = connectorPageSourceWithRowPositions.getConnectorPageSource();
 
         Supplier<Optional<RowPredicate>> deletePredicate = Suppliers.memoize(() -> {
+            // If equality deletes are optimized into a join they don't need to be applied here
+            List<DeleteFile> deletesToApply = split
+                    .getDeletes()
+                    .stream()
+                    .filter(deleteFile -> deleteFile.content() == POSITION_DELETES || table.isApplyEqualityDeletesDuringScan())
+                    .collect(Collectors.toList());
             List<DeleteFilter> deleteFilters = readDeletes(
                     session,
                     tableSchema,
                     split.getPath(),
-                    split.getDeletes(),
+                    deletesToApply,
                     connectorPageSourceWithRowPositions.getStartRowPosition(),
                     connectorPageSourceWithRowPositions.getEndRowPosition());
             return deleteFilters.stream()
