@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.iceberg.CatalogUtil;
+import org.apache.iceberg.aws.glue.GlueCatalog;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.SupportsNamespaces;
 
@@ -77,8 +78,15 @@ public class IcebergResourceFactory
     public Catalog getCatalog(ConnectorSession session)
     {
         try {
-            return catalogCache.get(getCatalogCacheKey(session), () -> CatalogUtil.loadCatalog(
-                    catalogType.getCatalogImpl(), catalogName, getCatalogProperties(session), getHadoopConfiguration()));
+            return catalogCache.get(getCatalogCacheKey(session), () -> {
+//                if (catalogType == CatalogType.GLUE) {
+//                    GlueCatalog catalog = new GlueCatalog();
+//                    catalog.initialize(catalogName, getCatalogProperties(session));
+//                    return catalog;
+//                }
+                return CatalogUtil.loadCatalog(
+                        catalogType.getCatalogImpl(), catalogName, getCatalogProperties(session), getHadoopConfiguration());
+            });
         }
         catch (ExecutionException | UncheckedExecutionException e) {
             throwIfInstanceOf(e.getCause(), PrestoException.class);

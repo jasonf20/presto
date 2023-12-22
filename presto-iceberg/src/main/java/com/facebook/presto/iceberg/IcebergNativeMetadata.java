@@ -97,11 +97,8 @@ public class IcebergNativeMetadata
     @Override
     protected boolean tableExists(ConnectorSession session, SchemaTableName schemaTableName)
     {
-        IcebergTableName name = IcebergTableName.from(schemaTableName.getTableName());
-        TableIdentifier tableIdentifier = toIcebergTableIdentifier(schemaTableName.getSchemaName(), name.getTableName());
-
         try {
-            resourceFactory.getCatalog(session).loadTable(tableIdentifier);
+            IcebergUtil.getNativeIcebergTable(resourceFactory, session, schemaTableName);
         }
         catch (NoSuchTableException e) {
             // return null to throw

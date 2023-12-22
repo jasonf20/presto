@@ -965,6 +965,7 @@ public class IcebergDistributedTestBase
                         .getParent()
                         .resolve(TEST_CATALOG_DIRECTORY)
                         .toFile();
+            case GLUE:
             case HADOOP:
             case NESSIE:
                 return dataDirectory.toFile();

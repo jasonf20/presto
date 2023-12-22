@@ -39,6 +39,8 @@ import com.facebook.presto.spi.PrestoException;
 import com.facebook.presto.spi.SchemaTableName;
 import com.facebook.presto.spi.TableNotFoundException;
 import com.facebook.presto.spi.connector.ConnectorMetadata;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -58,6 +60,7 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.Snapshot;
 import org.apache.iceberg.StructLike;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableOperations;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.expressions.Expression;
@@ -66,6 +69,7 @@ import org.apache.iceberg.io.CloseableIterator;
 import org.apache.iceberg.io.LocationProvider;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.util.SnapshotUtil;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.joda.time.DateTimeZone;
 
 import java.io.IOException;
@@ -194,9 +198,15 @@ public final class IcebergUtil
         return new BaseTable(operations, quotedTableName(table));
     }
 
+    private static final @NonNull Cache<SchemaTableName, Table> tableMetadataCache = Caffeine.newBuilder().maximumSize(100).build();
+
     public static Table getNativeIcebergTable(IcebergResourceFactory resourceFactory, ConnectorSession session, SchemaTableName table)
     {
-        return resourceFactory.getCatalog(session).loadTable(toIcebergTableIdentifier(table));
+//        return tableMetadataCache.get(table, schemaTableName ->
+//                ((BaseTable) resourceFactory.getCatalog(session).loadTable(toIcebergTableIdentifier(schemaTableName))).operations().current());
+        return tableMetadataCache.get(table, schemaTableName ->
+                (resourceFactory.getCatalog(session).loadTable(toIcebergTableIdentifier(schemaTableName))));
+//        return resourceFactory.getCatalog(session).loadTable(toIcebergTableIdentifier(table));
     }
 
     public static List<IcebergColumnHandle> getPartitionKeyColumnHandles(org.apache.iceberg.Table table, TypeManager typeManager)
