@@ -725,7 +725,7 @@ public class IcebergPageSourceProvider
 
         List<IcebergColumnHandle> regularColumns = columns.stream()
                 .map(IcebergColumnHandle.class::cast)
-                .filter(column -> !partitionKeys.containsKey(column.getId()))
+                .filter(column -> !partitionKeys.containsKey(column.getId()) && !IcebergMetadataColumn.isMetadataColumnId(column.getId()))
                 .collect(Collectors.toList());
 
         Optional<String> tableSchemaJson = table.getTableSchemaJson();

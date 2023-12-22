@@ -51,6 +51,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.iceberg.DeleteFile;
+import org.apache.iceberg.FileContent;
 import org.apache.iceberg.PartitionField;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
@@ -157,13 +158,15 @@ public class IcebergEqualityDeleteAsJoin
                     IcebergUtil.getDeleteFiles(icebergTable, icebergTableHandle.getTableName().getSnapshotId().get(), icebergTableHandle.getPredicate()).iterator()) {
                 while (files.hasNext()) {
                     DeleteFile delete = files.next();
-                    PartitionSpec partitionSpec = icebergTable.specs().get(delete.specId());
-                    partitionSpec.fields().forEach(f -> partitionFields.put(f.fieldId(), f));
-                    List<Integer> partitionFieldIds = partitionSpec.fields().stream().map(PartitionField::sourceId).collect(Collectors.toList());
-                    HashSet<Integer> result = new HashSet<>();
-                    result.addAll(delete.equalityFieldIds());
-                    result.addAll(partitionFieldIds);
-                    deleteSchemas.add(ImmutableSet.copyOf(result));
+                    if (delete.content() == FileContent.EQUALITY_DELETES) {
+                        PartitionSpec partitionSpec = icebergTable.specs().get(delete.specId());
+                        partitionSpec.fields().forEach(f -> partitionFields.put(f.fieldId(), f));
+                        List<Integer> partitionFieldIds = partitionSpec.fields().stream().map(PartitionField::sourceId).collect(Collectors.toList());
+                        HashSet<Integer> result = new HashSet<>();
+                        result.addAll(delete.equalityFieldIds());
+                        result.addAll(partitionFieldIds);
+                        deleteSchemas.add(ImmutableSet.copyOf(result));
+                    }
                 }
             }
             catch (IOException e) {
@@ -244,9 +247,6 @@ public class IcebergEqualityDeleteAsJoin
                         .filter(f -> !IcebergMetadataColumn.isMetadataColumnId(((IcebergColumnHandle) (f.getValue())).getId()))
                         .map(kvp -> {
                             VariableReferenceExpression left = reverseAssignmentsMap.get(((IcebergColumnHandle) (kvp.getValue())).getId());
-                            if (left == null) {
-                                throw new RuntimeException("debug");
-                            }
                             VariableReferenceExpression right = kvp.getKey();
                             return new CanonicalJoinNode.EquiJoinClause(left, right);
                         }).collect(Collectors.toSet());

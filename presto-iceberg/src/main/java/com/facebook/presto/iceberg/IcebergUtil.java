@@ -797,10 +797,12 @@ public final class IcebergUtil
                             if (!currentDeletes.hasNext()) {
                                 currentDeletes = fileTasks.next().deletes().iterator();
                             }
-                            DeleteFile item = currentDeletes.next();
-                            if (seenFiles.add(item.path().toString())) {
-                                currentFile = item;
-                                return true;
+                            if (currentDeletes.hasNext()) {
+                                DeleteFile item = currentDeletes.next();
+                                if (seenFiles.add(item.path().toString())) {
+                                    currentFile = item;
+                                    return true;
+                                }
                             }
                         }
                         return false;
