@@ -60,7 +60,6 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.Snapshot;
 import org.apache.iceberg.StructLike;
 import org.apache.iceberg.Table;
-import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableOperations;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.expressions.Expression;
@@ -198,14 +197,14 @@ public final class IcebergUtil
         return new BaseTable(operations, quotedTableName(table));
     }
 
-    private static final @NonNull Cache<SchemaTableName, Table> tableMetadataCache = Caffeine.newBuilder().maximumSize(100).build();
+    private static final @NonNull Cache<String, Table> tableMetadataCache = Caffeine.newBuilder().maximumSize(100).build();
 
     public static Table getNativeIcebergTable(IcebergResourceFactory resourceFactory, ConnectorSession session, SchemaTableName table)
     {
 //        return tableMetadataCache.get(table, schemaTableName ->
 //                ((BaseTable) resourceFactory.getCatalog(session).loadTable(toIcebergTableIdentifier(schemaTableName))).operations().current());
-        return tableMetadataCache.get(table, schemaTableName ->
-                (resourceFactory.getCatalog(session).loadTable(toIcebergTableIdentifier(schemaTableName))));
+        return tableMetadataCache.get(session.getQueryId(), queryId ->
+                (resourceFactory.getCatalog(session).loadTable(toIcebergTableIdentifier(table))));
 //        return resourceFactory.getCatalog(session).loadTable(toIcebergTableIdentifier(table));
     }
 
