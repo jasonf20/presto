@@ -160,7 +160,7 @@ public class IcebergEqualityDeleteAsJoin
                     if (delete.content() == FileContent.EQUALITY_DELETES) {
                         PartitionSpec partitionSpec = icebergTable.specs().get(delete.specId());
                         partitionSpec.fields().forEach(f -> partitionFields.put(f.fieldId(), f));
-                        List<Integer> partitionFieldIds = partitionSpec.fields().stream().map(PartitionField::sourceId).collect(Collectors.toList());
+                        List<Integer> partitionFieldIds = partitionSpec.fields().stream().map(PartitionField::fieldId).collect(Collectors.toList());
                         HashSet<Integer> result = new HashSet<>();
                         result.addAll(delete.equalityFieldIds());
                         result.addAll(partitionFieldIds);
@@ -184,10 +184,11 @@ public class IcebergEqualityDeleteAsJoin
                         if (partitionFields.containsKey(fieldId)) {
                             PartitionField partitionField = partitionFields.get(fieldId);
                             Types.NestedField sourceField = icebergTable.schema().findField(partitionField.sourceId());
+                            Types.NestedField fieldToSelect = icebergTable.spec().partitionType().field(partitionField.fieldId()); //TODO: Use right spec id
                             Type partitionFieldType = TypeConverter.toPrestoType(partitionField.transform().getResultType(sourceField.type()), typeManager);
                             unselectedAssignmentsBuilder.put(
                                     variableAllocator.newVariable(partitionField.name(), partitionFieldType),
-                                    IcebergColumnHandle.create(sourceField, typeManager, PARTITION_KEY));
+                                    IcebergColumnHandle.create(fieldToSelect, typeManager, PARTITION_KEY));
                         }
                         else {
                             Types.NestedField schemaField = icebergTable.schema().findField(fieldId);
