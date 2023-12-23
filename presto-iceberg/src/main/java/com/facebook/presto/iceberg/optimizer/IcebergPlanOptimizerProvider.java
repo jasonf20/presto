@@ -58,7 +58,7 @@ public class IcebergPlanOptimizerProvider
                 new IcebergParquetDereferencePushDown(transactionManager, rowExpressionService, typeManager));
         this.logicalPlanOptimizers = ImmutableSet.<ConnectorPlanOptimizer>builder()
                 .addAll(this.planOptimizers)
-                .add(new IcebergEqualityDeleteAsJoin(functionResolution, rowExpressionService, transactionManager, typeManager))
+                .add(new IcebergEqualityDeleteAsJoin(functionResolution, transactionManager, typeManager))
                 .build();
     }
 

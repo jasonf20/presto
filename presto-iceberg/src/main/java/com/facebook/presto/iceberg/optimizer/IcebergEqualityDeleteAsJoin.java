@@ -43,7 +43,6 @@ import com.facebook.presto.spi.plan.PlanNodeIdAllocator;
 import com.facebook.presto.spi.plan.TableScanNode;
 import com.facebook.presto.spi.relation.CallExpression;
 import com.facebook.presto.spi.relation.RowExpression;
-import com.facebook.presto.spi.relation.RowExpressionService;
 import com.facebook.presto.spi.relation.SpecialFormExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.google.common.collect.ImmutableList;
@@ -85,18 +84,15 @@ import static java.util.Objects.requireNonNull;
 public class IcebergEqualityDeleteAsJoin
         implements ConnectorPlanOptimizer
 {
-    private final RowExpressionService rowExpressionService;
     private final StandardFunctionResolution functionResolution;
     private final IcebergTransactionManager transactionManager;
     private final TypeManager typeManager;
 
     IcebergEqualityDeleteAsJoin(StandardFunctionResolution functionResolution,
-            RowExpressionService rowExpressionService,
             IcebergTransactionManager transactionManager,
             TypeManager typeManager)
     {
         this.functionResolution = requireNonNull(functionResolution, "functionResolution is null");
-        this.rowExpressionService = requireNonNull(rowExpressionService, "rowExpressionService is null");
         this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
     }
@@ -107,7 +103,7 @@ public class IcebergEqualityDeleteAsJoin
         if (!isDeleteToJoinPushdownEnabled(session)) {
             return maxSubplan;
         }
-        return rewriteWith(new DeleteAsJoinRewriter(functionResolution, rowExpressionService,
+        return rewriteWith(new DeleteAsJoinRewriter(functionResolution,
                 transactionManager, idAllocator, session, typeManager, variableAllocator), maxSubplan);
     }
 
@@ -115,7 +111,6 @@ public class IcebergEqualityDeleteAsJoin
             extends ConnectorPlanRewriter<Void>
     {
         private final ConnectorSession session;
-        private final RowExpressionService rowExpressionService;
         private final StandardFunctionResolution functionResolution;
         private final PlanNodeIdAllocator idAllocator;
         private final IcebergTransactionManager transactionManager;
@@ -124,7 +119,6 @@ public class IcebergEqualityDeleteAsJoin
 
         public DeleteAsJoinRewriter(
                 StandardFunctionResolution functionResolution,
-                RowExpressionService rowExpressionService,
                 IcebergTransactionManager transactionManager,
                 PlanNodeIdAllocator idAllocator,
                 ConnectorSession session,
@@ -132,7 +126,6 @@ public class IcebergEqualityDeleteAsJoin
                 VariableAllocator variableAllocator)
         {
             this.functionResolution = functionResolution;
-            this.rowExpressionService = rowExpressionService;
             this.transactionManager = transactionManager;
             this.idAllocator = idAllocator;
             this.session = session;
@@ -145,16 +138,18 @@ public class IcebergEqualityDeleteAsJoin
         {
             TableHandle table = node.getTable();
             IcebergTableHandle icebergTableHandle = (IcebergTableHandle) table.getConnectorHandle();
-            if (!icebergTableHandle.getTableName().getSnapshotId().isPresent() ||
-                    icebergTableHandle.getTableName().getTableType() != TableType.DATA) {
+            IcebergTableName tableName = icebergTableHandle.getTableName();
+            if (!tableName.getSnapshotId().isPresent() || tableName.getTableType() != TableType.DATA) {
+                // Node is already optimized or not ready for planning
                 return node;
             }
+
             IcebergAbstractMetadata metadata = (IcebergAbstractMetadata) transactionManager.get(table.getTransaction());
             Table icebergTable = getIcebergTable(metadata, session, icebergTableHandle.getSchemaTableName());
             HashSet<Set<Integer>> deleteSchemas = new HashSet<>();
             Map<Integer, PartitionField> partitionFields = new HashMap<>();
             try (CloseableIterator<DeleteFile> files =
-                    IcebergUtil.getDeleteFiles(icebergTable, icebergTableHandle.getTableName().getSnapshotId().get(), icebergTableHandle.getPredicate()).iterator()) {
+                    IcebergUtil.getDeleteFiles(icebergTable, tableName.getSnapshotId().get(), icebergTableHandle.getPredicate()).iterator()) {
                 while (files.hasNext()) {
                     DeleteFile delete = files.next();
                     if (delete.content() == FileContent.EQUALITY_DELETES) {
@@ -171,67 +166,22 @@ public class IcebergEqualityDeleteAsJoin
             catch (IOException e) {
                 return node;
             }
+
             if (deleteSchemas.isEmpty()) {
+                // no equality deletes
                 return node;
             }
 
-            // Add all the fields required by the join that were not added by the users query
-            Set<Integer> selectedFields = node.getAssignments().values().stream().map(f -> ((IcebergColumnHandle) f).getId()).collect(Collectors.toSet());
-            Set<Integer> unselectedFields = Sets.difference(deleteSchemas.stream().reduce(Sets::union).get(), selectedFields);
-            ImmutableMap.Builder<VariableReferenceExpression, ColumnHandle> unselectedAssignmentsBuilder = ImmutableMap.builder();
-            unselectedFields
-                    .forEach(fieldId -> {
-                        if (partitionFields.containsKey(fieldId)) {
-                            PartitionField partitionField = partitionFields.get(fieldId);
-                            Types.NestedField sourceField = icebergTable.schema().findField(partitionField.sourceId());
-                            Types.NestedField fieldToSelect = icebergTable.spec().partitionType().field(partitionField.fieldId()); //TODO: Use right spec id
-                            Type partitionFieldType = TypeConverter.toPrestoType(partitionField.transform().getResultType(sourceField.type()), typeManager);
-                            unselectedAssignmentsBuilder.put(
-                                    variableAllocator.newVariable(partitionField.name(), partitionFieldType),
-                                    IcebergColumnHandle.create(fieldToSelect, typeManager, PARTITION_KEY));
-                        }
-                        else {
-                            Types.NestedField schemaField = icebergTable.schema().findField(fieldId);
-                            unselectedAssignmentsBuilder.put(
-                                    variableAllocator.newVariable(schemaField.name(), TypeConverter.toPrestoType(schemaField.type(), typeManager)),
-                                    IcebergColumnHandle.create(schemaField, typeManager, REGULAR));
-                        }
-                    });
-            ImmutableMap<VariableReferenceExpression, ColumnHandle> unselectedAssignments = unselectedAssignmentsBuilder.build();
+            // Add all the fields required by the join that were not added by the user's query
+            ImmutableMap<VariableReferenceExpression, ColumnHandle> unselectedAssignments =
+                    createAssignmentsForUnselectedFields(node, deleteSchemas, partitionFields, icebergTable);
 
-            IcebergTableName oldTableName = icebergTableHandle.getTableName();
-            IcebergTableName updatedTableName =
-                    new IcebergTableName(oldTableName.getTableName(), TableType.DATE_WITHOUT_EQUALITY_DELETES, oldTableName.getSnapshotId(), oldTableName.getChangelogEndSnapshot());
-            IcebergTableHandle updatedHandle = new IcebergTableHandle(icebergTableHandle.getSchemaName(),
-                    updatedTableName,
-                    icebergTableHandle.isSnapshotSpecified(),
-                    icebergTableHandle.getPredicate(),
-                    icebergTableHandle.getTableSchemaJson());
-            VariableReferenceExpression dataSequenceNumberVariableReference = toVariableReference(IcebergColumnHandle.dataSequenceNumberColumnHandle());
-            ImmutableMap<VariableReferenceExpression, ColumnHandle> assignments = ImmutableMap.<VariableReferenceExpression, ColumnHandle>builder()
-                    .put(dataSequenceNumberVariableReference, IcebergColumnHandle.dataSequenceNumberColumnHandle())
-                    .putAll(unselectedAssignments)
-                    .putAll(node.getAssignments())
-                    .build();
-            ImmutableList.Builder<VariableReferenceExpression> outputsBuilder = ImmutableList.builder();
-            outputsBuilder.addAll(node.getOutputVariables());
-            if (!node.getAssignments().containsKey(dataSequenceNumberVariableReference)) {
-                outputsBuilder.add(dataSequenceNumberVariableReference);
-            }
-            outputsBuilder.addAll(ImmutableList.copyOf(unselectedAssignments.keySet()));
-
-            PlanNode parentJoin = new TableScanNode(node.getSourceLocation(),
-                    node.getId(),
-                    new TableHandle(table.getConnectorId(), updatedHandle, table.getTransaction(), table.getLayout(), table.getDynamicFilter()),
-                    outputsBuilder.build(),
-                    assignments,
-                    node.getTableConstraints(),
-                    node.getCurrentConstraint(),
-                    node.getEnforcedConstraint());
-            List<RowExpression> deleteVersionColumns = new ArrayList<>();
-
+            TableScanNode updatedTableScan = createNewRoot(node, icebergTableHandle, tableName, unselectedAssignments, table);
             Map<Integer, VariableReferenceExpression> reverseAssignmentsMap =
-                    assignments.entrySet().stream().collect(Collectors.toMap(x -> ((IcebergColumnHandle) (x.getValue())).getId(), Map.Entry::getKey));
+                    updatedTableScan.getAssignments().entrySet().stream().collect(Collectors.toMap(x -> ((IcebergColumnHandle) (x.getValue())).getId(), Map.Entry::getKey));
+
+            List<RowExpression> deleteVersionColumns = new ArrayList<>();
+            PlanNode parentJoin = updatedTableScan;
             for (Set<Integer> deleteSchema : deleteSchemas) {
                 List<Types.NestedField> deleteFields = deleteSchema
                         .stream()
@@ -259,9 +209,8 @@ public class IcebergEqualityDeleteAsJoin
                         Collections.unmodifiableList(Arrays.asList(sourceSequenceNumber, joinSequenceNumber)));
 
                 List<VariableReferenceExpression> outputs = deleteColumnAssignments.keySet().asList();
-                IcebergTableName icebergTableName = icebergTableHandle.getTableName();
                 IcebergTableHandle deletesTableHanlde = new IcebergTableHandle(icebergTableHandle.getSchemaName(),
-                        new IcebergTableName(icebergTableName.getTableName(), TableType.EQUALITY_DELETES, icebergTableName.getSnapshotId(), Optional.empty()),
+                        new IcebergTableName(tableName.getTableName(), TableType.EQUALITY_DELETES, tableName.getSnapshotId(), Optional.empty()),
                         icebergTableHandle.isSnapshotSpecified(),
                         icebergTableHandle.getPredicate(),
                         Optional.of(SchemaParser.toJson(new Schema(deleteFields))));
@@ -289,6 +238,70 @@ public class IcebergEqualityDeleteAsJoin
             return filter;
         }
 
+        /**
+         * - Updates table handle to DATA_WITHOUT_EQUALITY_DELETES since the page source for this node should now not apply equality deletes.
+         * - Adds extra assignments and outputs that are needed by the join
+         */
+        private TableScanNode createNewRoot(TableScanNode node, IcebergTableHandle icebergTableHandle, IcebergTableName tableName, ImmutableMap<VariableReferenceExpression, ColumnHandle> unselectedAssignments, TableHandle table)
+        {
+            IcebergTableHandle updatedHandle = new IcebergTableHandle(icebergTableHandle.getSchemaName(),
+                    new IcebergTableName(tableName.getTableName(), TableType.DATE_WITHOUT_EQUALITY_DELETES, tableName.getSnapshotId(), tableName.getChangelogEndSnapshot()),
+                    icebergTableHandle.isSnapshotSpecified(),
+                    icebergTableHandle.getPredicate(),
+                    icebergTableHandle.getTableSchemaJson());
+
+            VariableReferenceExpression dataSequenceNumberVariableReference = toVariableReference(IcebergColumnHandle.dataSequenceNumberColumnHandle());
+            ImmutableMap.Builder<VariableReferenceExpression, ColumnHandle> assignmentsBuilder = ImmutableMap.<VariableReferenceExpression, ColumnHandle>builder()
+                    .put(dataSequenceNumberVariableReference, IcebergColumnHandle.dataSequenceNumberColumnHandle())
+                    .putAll(unselectedAssignments)
+                    .putAll(node.getAssignments());
+            ImmutableList.Builder<VariableReferenceExpression> outputsBuilder = ImmutableList.builder();
+            outputsBuilder.addAll(node.getOutputVariables());
+            if (!node.getAssignments().containsKey(dataSequenceNumberVariableReference)) {
+                outputsBuilder.add(dataSequenceNumberVariableReference);
+            }
+            outputsBuilder.addAll(ImmutableList.copyOf(unselectedAssignments.keySet()));
+
+            return new TableScanNode(node.getSourceLocation(),
+                    node.getId(),
+                    Optional.of(node),
+                    new TableHandle(table.getConnectorId(), updatedHandle, table.getTransaction(), table.getLayout(), table.getDynamicFilter()),
+                    outputsBuilder.build(),
+                    assignmentsBuilder.build(),
+                    node.getTableConstraints(),
+                    node.getCurrentConstraint(),
+                    node.getEnforcedConstraint());
+        }
+
+        private ImmutableMap<VariableReferenceExpression, ColumnHandle> createAssignmentsForUnselectedFields(TableScanNode node,
+                HashSet<Set<Integer>> deleteSchemas,
+                Map<Integer, PartitionField> partitionFields,
+                Table icebergTable)
+        {
+            Set<Integer> selectedFields = node.getAssignments().values().stream().map(f -> ((IcebergColumnHandle) f).getId()).collect(Collectors.toSet());
+            Set<Integer> unselectedFields = Sets.difference(deleteSchemas.stream().reduce(Sets::union).orElseGet(Collections::emptySet), selectedFields);
+            ImmutableMap.Builder<VariableReferenceExpression, ColumnHandle> unselectedAssignmentsBuilder = ImmutableMap.builder();
+            unselectedFields
+                    .forEach(fieldId -> {
+                        if (partitionFields.containsKey(fieldId)) {
+                            PartitionField partitionField = partitionFields.get(fieldId);
+                            Types.NestedField sourceField = icebergTable.schema().findField(partitionField.sourceId());
+                            Types.NestedField fieldToSelect = icebergTable.spec().partitionType().field(partitionField.fieldId()); //TODO: Use right spec id
+                            Type partitionFieldType = TypeConverter.toPrestoType(partitionField.transform().getResultType(sourceField.type()), typeManager);
+                            unselectedAssignmentsBuilder.put(
+                                    variableAllocator.newVariable(partitionField.name(), partitionFieldType),
+                                    IcebergColumnHandle.create(fieldToSelect, typeManager, PARTITION_KEY));
+                        }
+                        else {
+                            Types.NestedField schemaField = icebergTable.schema().findField(fieldId);
+                            unselectedAssignmentsBuilder.put(
+                                    variableAllocator.newVariable(schemaField.name(), TypeConverter.toPrestoType(schemaField.type(), typeManager)),
+                                    IcebergColumnHandle.create(schemaField, typeManager, REGULAR));
+                        }
+                    });
+            return unselectedAssignmentsBuilder.build();
+        }
+
         private VariableReferenceExpression toVariableReference(IcebergColumnHandle c)
         {
             return variableAllocator.newVariable(c.getName(), c.getType());
@@ -304,7 +317,7 @@ public class IcebergEqualityDeleteAsJoin
             return variableAllocator.newVariable(field.name(), TypeConverter.toPrestoType(field.type(), typeManager));
         }
 
-        private ColumnIdentity toColumnIdentity(Types.NestedField nestedField)
+        private static ColumnIdentity toColumnIdentity(Types.NestedField nestedField)
         {
             return new ColumnIdentity(nestedField.fieldId(), nestedField.name(), ColumnIdentity.TypeCategory.PRIMITIVE, Collections.emptyList());
         }
