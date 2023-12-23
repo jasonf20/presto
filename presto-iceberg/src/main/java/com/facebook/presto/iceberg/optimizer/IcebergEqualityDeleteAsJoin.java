@@ -251,7 +251,7 @@ public class IcebergEqualityDeleteAsJoin
                             VariableReferenceExpression right = kvp.getKey();
                             return new ConnectorJoinNode.EquiJoinClause(left, right);
                         }).collect(Collectors.toSet());
-                VariableReferenceExpression sourceSequenceNumber = findMatchingVariable(parentJoin.getOutputVariables(), DATA_SEQUENCE_NUMBER.getColumnName());
+                VariableReferenceExpression sourceSequenceNumber = reverseAssignmentsMap.get(DATA_SEQUENCE_NUMBER.getId());
                 FunctionHandle lessThan = functionResolution.comparisonFunction(OperatorType.LESS_THAN, BigintType.BIGINT, BigintType.BIGINT);
                 RowExpression versionFilter = new CallExpression(lessThan.getName(),
                         lessThan,
@@ -307,11 +307,6 @@ public class IcebergEqualityDeleteAsJoin
         private ColumnIdentity toColumnIdentity(Types.NestedField nestedField)
         {
             return new ColumnIdentity(nestedField.fieldId(), nestedField.name(), ColumnIdentity.TypeCategory.PRIMITIVE, Collections.emptyList());
-        }
-
-        private VariableReferenceExpression findMatchingVariable(List<VariableReferenceExpression> columns, String nameToMatch)
-        {
-            return columns.stream().filter(f -> f.getName().startsWith(nameToMatch)).findFirst().get();
         }
     }
 }
