@@ -74,6 +74,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -851,6 +853,25 @@ public class IcebergDistributedTestBase
     }
 
     @Test(dataProvider = "equalityDeleteOptions")
+    public void testEqualityDeletesWithPartitions(String fileFormat, boolean pushdownEnabled)
+            throws Exception
+    {
+        Session session = deleteAsJoinEnabled(pushdownEnabled);
+        String tableName = "test_v2_row_delete_" + randomTableSuffix();
+        assertUpdate("CREATE TABLE " + tableName + " with (format = '" + fileFormat + "', partitioning = ARRAY['nationkey']) AS SELECT * FROM tpch.tiny.nation order by nationkey", 25);
+        Table icebergTable = updateTable(tableName);
+
+        List<Long> partitions = Arrays.asList(1L, 2L, 3L, 17L, 24L);
+        for (long nationKey : partitions) {
+            writeEqualityDeleteToNationTable(icebergTable, ImmutableMap.of("regionkey", 1L), ImmutableMap.of("nationkey", nationKey));
+        }
+        testCheckDeleteFiles(icebergTable, partitions.size(), partitions.stream().map(i -> EQUALITY_DELETES).collect(Collectors.toList()));
+        assertQuery(session, "SELECT * FROM " + tableName, "SELECT * FROM nation WHERE regionkey != 1");
+        assertQuery(session, "SELECT nationkey FROM " + tableName, "SELECT nationkey FROM nation WHERE regionkey != 1");
+        assertQuery(session, "SELECT name FROM " + tableName, "SELECT name FROM nation WHERE regionkey != 1");
+    }
+
+    @Test(dataProvider = "equalityDeleteOptions")
     public void testTableWithPositionDeletesAndEqualityDeletes(String fileFormat, boolean pushdownEnabled)
             throws Exception
     {
@@ -926,18 +947,30 @@ public class IcebergDistributedTestBase
     private void writeEqualityDeleteToNationTable(Table icebergTable, Map<String, Object> overwriteValues)
             throws Exception
     {
+        writeEqualityDeleteToNationTable(icebergTable, overwriteValues, Collections.emptyMap());
+    }
+
+    private void writeEqualityDeleteToNationTable(Table icebergTable, Map<String, Object> overwriteValues, Map<String, Object> partitionValues)
+            throws Exception
+    {
         File metastoreDir = getDistributedQueryRunner().getCoordinator().getDataDirectory().toFile();
         org.apache.hadoop.fs.Path metadataDir = new org.apache.hadoop.fs.Path(metastoreDir.toURI());
         String deleteFileName = "delete_file_" + UUID.randomUUID();
         FileSystem fs = getHdfsEnvironment().getFileSystem(new HdfsContext(SESSION), metadataDir);
         Schema deleteRowSchema = icebergTable.schema().select("regionkey");
-        EqualityDeleteWriter<Record> writer = Parquet.writeDeletes(HadoopOutputFile.fromPath(new org.apache.hadoop.fs.Path(metadataDir, deleteFileName), fs))
+        Parquet.DeleteWriteBuilder writerBuilder = Parquet.writeDeletes(HadoopOutputFile.fromPath(new org.apache.hadoop.fs.Path(metadataDir, deleteFileName), fs))
                 .forTable(icebergTable)
                 .rowSchema(deleteRowSchema)
                 .createWriterFunc(GenericParquetWriter::buildWriter)
                 .equalityFieldIds(deleteRowSchema.findField("regionkey").fieldId())
-                .overwrite()
-                .buildEqualityWriter();
+                .overwrite();
+
+        if (!partitionValues.isEmpty()) {
+            GenericRecord partitionData = GenericRecord.create(icebergTable.spec().partitionType());
+            writerBuilder.withPartition(partitionData.copy(partitionValues));
+        }
+
+        EqualityDeleteWriter<Object> writer = writerBuilder.buildEqualityWriter();
 
         Record dataDelete = GenericRecord.create(deleteRowSchema);
         try (Closeable ignored = writer) {
