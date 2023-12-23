@@ -62,6 +62,7 @@ import org.apache.iceberg.deletes.PositionDelete;
 import org.apache.iceberg.deletes.PositionDeleteWriter;
 import org.apache.iceberg.hadoop.HadoopOutputFile;
 import org.apache.iceberg.parquet.Parquet;
+import org.apache.iceberg.types.Types;
 import org.apache.iceberg.util.TableScanUtil;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -83,6 +84,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.facebook.presto.common.type.VarcharType.VARCHAR;
 import static com.facebook.presto.iceberg.IcebergQueryRunner.ICEBERG_CATALOG;
@@ -872,6 +874,41 @@ public class IcebergDistributedTestBase
     }
 
     @Test(dataProvider = "equalityDeleteOptions")
+    public void testEqualityDeletesWithCompositeKey(String fileFormat, boolean pushdownEnabled)
+            throws Exception
+    {
+        Session session = deleteAsJoinEnabled(pushdownEnabled);
+        String tableName = "test_v2_row_delete_" + randomTableSuffix();
+        assertUpdate("CREATE TABLE " + tableName + " with (format = '" + fileFormat + "') AS SELECT * FROM tpch.tiny.nation order by nationkey", 25);
+        Table icebergTable = updateTable(tableName);
+
+        writeEqualityDeleteToNationTable(icebergTable, ImmutableMap.of("regionkey", 0L, "name", "ALGERIA"));
+        testCheckDeleteFiles(icebergTable, 1, Stream.generate(() -> EQUALITY_DELETES).limit(1).collect(Collectors.toList()));
+        assertQuery(session, "SELECT * FROM " + tableName, "SELECT * FROM nation WHERE NOT(regionkey = 0 AND name = 'ALGERIA')");
+        assertQuery(session, "SELECT nationkey FROM " + tableName, "SELECT nationkey FROM nation WHERE NOT(regionkey = 0 AND name = 'ALGERIA')");
+        assertQuery(session, "SELECT name FROM " + tableName, "SELECT name FROM nation WHERE NOT(regionkey = 0 AND name = 'ALGERIA')");
+    }
+
+    @Test(dataProvider = "equalityDeleteOptions")
+    public void testEqualityDeletesWithMultipleDeleteSchemas(String fileFormat, boolean pushdownEnabled)
+            throws Exception
+    {
+        Session session = deleteAsJoinEnabled(pushdownEnabled);
+        String tableName = "test_v2_row_delete_" + randomTableSuffix();
+        assertUpdate("CREATE TABLE " + tableName + " with (format = '" + fileFormat + "') AS SELECT * FROM tpch.tiny.nation order by nationkey", 25);
+        Table icebergTable = updateTable(tableName);
+
+        writeEqualityDeleteToNationTable(icebergTable, ImmutableMap.of("regionkey", 1L));
+        writeEqualityDeleteToNationTable(icebergTable, ImmutableMap.of("name", "IRAN"));
+        writeEqualityDeleteToNationTable(icebergTable, ImmutableMap.of("regionkey", 2L, "name", "INDONESIA"));
+        testCheckDeleteFiles(icebergTable, 3, Stream.generate(() -> EQUALITY_DELETES).limit(3).collect(Collectors.toList()));
+        assertQuery(session, "SELECT * FROM " + tableName, "SELECT * FROM nation WHERE NOT(regionkey = 2 AND name = 'INDONESIA') AND name <> 'IRAN' AND regionkey <> 1");
+        assertQuery(session, "SELECT nationkey FROM " + tableName, "SELECT nationkey FROM nation WHERE NOT(regionkey = 2 AND name = 'INDONESIA') AND name <> 'IRAN' AND regionkey <> 1");
+        assertQuery(session, "SELECT name FROM " + tableName, "SELECT name FROM nation WHERE NOT(regionkey = 2 AND name = 'INDONESIA') AND name <> 'IRAN' AND regionkey <> 1");
+    }
+
+
+    @Test(dataProvider = "equalityDeleteOptions")
     public void testTableWithPositionDeletesAndEqualityDeletes(String fileFormat, boolean pushdownEnabled)
             throws Exception
     {
@@ -957,12 +994,12 @@ public class IcebergDistributedTestBase
         org.apache.hadoop.fs.Path metadataDir = new org.apache.hadoop.fs.Path(metastoreDir.toURI());
         String deleteFileName = "delete_file_" + UUID.randomUUID();
         FileSystem fs = getHdfsEnvironment().getFileSystem(new HdfsContext(SESSION), metadataDir);
-        Schema deleteRowSchema = icebergTable.schema().select("regionkey");
+        Schema deleteRowSchema = icebergTable.schema().select(overwriteValues.keySet());
         Parquet.DeleteWriteBuilder writerBuilder = Parquet.writeDeletes(HadoopOutputFile.fromPath(new org.apache.hadoop.fs.Path(metadataDir, deleteFileName), fs))
                 .forTable(icebergTable)
                 .rowSchema(deleteRowSchema)
                 .createWriterFunc(GenericParquetWriter::buildWriter)
-                .equalityFieldIds(deleteRowSchema.findField("regionkey").fieldId())
+                .equalityFieldIds(deleteRowSchema.columns().stream().map(Types.NestedField::fieldId).collect(Collectors.toList()))
                 .overwrite();
 
         if (!partitionValues.isEmpty()) {
