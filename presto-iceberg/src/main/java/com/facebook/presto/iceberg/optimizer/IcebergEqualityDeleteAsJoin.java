@@ -182,7 +182,6 @@ public class IcebergEqualityDeleteAsJoin
             unselectedFields
                     .forEach(fieldId -> {
                         if (partitionFields.containsKey(fieldId)) {
-                            // TODO: Is this code path needed? (Maybe it is needed with bucketed partitions?)
                             PartitionField partitionField = partitionFields.get(fieldId);
                             Types.NestedField sourceField = icebergTable.schema().findField(partitionField.sourceId());
                             Type partitionFieldType = TypeConverter.toPrestoType(partitionField.transform().getResultType(sourceField.type()), typeManager);

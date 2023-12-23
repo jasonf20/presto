@@ -15,7 +15,10 @@ package com.facebook.presto.iceberg;
 
 import com.facebook.presto.Session;
 import com.facebook.presto.common.QualifiedObjectName;
+import com.facebook.presto.common.block.Block;
+import com.facebook.presto.common.block.BlockBuilder;
 import com.facebook.presto.common.transaction.TransactionId;
+import com.facebook.presto.common.type.BigintType;
 import com.facebook.presto.hive.HdfsConfiguration;
 import com.facebook.presto.hive.HdfsConfigurationInitializer;
 import com.facebook.presto.hive.HdfsContext;
@@ -866,6 +869,29 @@ public class IcebergDistributedTestBase
         List<Long> partitions = Arrays.asList(1L, 2L, 3L, 17L, 24L);
         for (long nationKey : partitions) {
             writeEqualityDeleteToNationTable(icebergTable, ImmutableMap.of("regionkey", 1L), ImmutableMap.of("nationkey", nationKey));
+        }
+        testCheckDeleteFiles(icebergTable, partitions.size(), partitions.stream().map(i -> EQUALITY_DELETES).collect(Collectors.toList()));
+        assertQuery(session, "SELECT * FROM " + tableName, "SELECT * FROM nation WHERE regionkey != 1");
+        assertQuery(session, "SELECT nationkey FROM " + tableName, "SELECT nationkey FROM nation WHERE regionkey != 1");
+        assertQuery(session, "SELECT name FROM " + tableName, "SELECT name FROM nation WHERE regionkey != 1");
+    }
+
+    @Test(dataProvider = "equalityDeleteOptions")
+    public void testEqualityDeletesWithHiddenPartitions(String fileFormat, boolean pushdownEnabled)
+            throws Exception
+    {
+        Session session = deleteAsJoinEnabled(pushdownEnabled);
+        String tableName = "test_v2_row_delete_" + randomTableSuffix();
+        assertUpdate("CREATE TABLE " + tableName + " with (format = '" + fileFormat + "', partitioning = ARRAY['bucket(nationkey,100)']) AS SELECT * FROM tpch.tiny.nation order by nationkey", 25);
+        Table icebergTable = updateTable(tableName);
+
+        PartitionTransforms.ColumnTransform columnTransform = PartitionTransforms.getColumnTransform(icebergTable.spec().fields().get(0), BigintType.BIGINT);
+        BlockBuilder builder = BigintType.BIGINT.createFixedSizeBlockBuilder(5);
+        List<Long> partitions = Arrays.asList(1L, 2L, 3L, 17L, 24L);
+        partitions.forEach(p -> BigintType.BIGINT.writeLong(builder, p));
+        Block partitionsBlock = columnTransform.getTransform().apply(builder.build());
+        for (int i = 0; i < partitionsBlock.getPositionCount(); i++) {
+            writeEqualityDeleteToNationTable(icebergTable, ImmutableMap.of("regionkey", 1L), ImmutableMap.of("nationkey_bucket", partitionsBlock.getInt(i)));
         }
         testCheckDeleteFiles(icebergTable, partitions.size(), partitions.stream().map(i -> EQUALITY_DELETES).collect(Collectors.toList()));
         assertQuery(session, "SELECT * FROM " + tableName, "SELECT * FROM nation WHERE regionkey != 1");
