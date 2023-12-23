@@ -26,7 +26,7 @@ import com.facebook.presto.spi.VariableAllocator;
 import com.facebook.presto.spi.WarningCollector;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.Assignments;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.FilterNode;
 import com.facebook.presto.spi.plan.MarkDistinctNode;
 import com.facebook.presto.spi.plan.PlanNode;
@@ -96,10 +96,10 @@ import static com.facebook.presto.common.type.BooleanType.BOOLEAN;
 import static com.facebook.presto.expressions.LogicalRowExpressions.FALSE_CONSTANT;
 import static com.facebook.presto.expressions.LogicalRowExpressions.TRUE_CONSTANT;
 import static com.facebook.presto.expressions.LogicalRowExpressions.extractConjuncts;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.FULL;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.INNER;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.LEFT;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.RIGHT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.FULL;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.LEFT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.RIGHT;
 import static com.facebook.presto.spi.plan.ProjectNode.Locality;
 import static com.facebook.presto.spi.plan.ProjectNode.Locality.LOCAL;
 import static com.facebook.presto.spi.plan.ProjectNode.Locality.REMOTE;
@@ -509,7 +509,7 @@ public class PredicatePushDown
             Locality leftLocality = LOCAL;
             Locality rightLocality = LOCAL;
             // Create new projections for the new join clauses
-            List<CanonicalJoinNode.EquiJoinClause> equiJoinClauses = new ArrayList<>();
+            List<ConnectorJoinNode.EquiJoinClause> equiJoinClauses = new ArrayList<>();
             ImmutableList.Builder<RowExpression> joinFilterBuilder = ImmutableList.builder();
             for (RowExpression conjunct : extractConjuncts(newJoinPredicate)) {
                 if (joinEqualityExpression(node.getLeft().getOutputVariables()).test(conjunct)) {
@@ -533,7 +533,7 @@ public class PredicatePushDown
                         }
                     }
 
-                    equiJoinClauses.add(new CanonicalJoinNode.EquiJoinClause(leftVariable, rightVariable));
+                    equiJoinClauses.add(new ConnectorJoinNode.EquiJoinClause(leftVariable, rightVariable));
                 }
                 else {
                     joinFilterBuilder.add(conjunct);
@@ -670,7 +670,7 @@ public class PredicatePushDown
 
         private static DynamicFiltersResult createDynamicFilters(
                 JoinNode node,
-                List<CanonicalJoinNode.EquiJoinClause> equiJoinClauses,
+                List<ConnectorJoinNode.EquiJoinClause> equiJoinClauses,
                 List<RowExpression> joinFilter,
                 PlanNodeIdAllocator idAllocator,
                 FunctionAndTypeManager functionAndTypeManager)
@@ -704,7 +704,7 @@ public class PredicatePushDown
 
         private static List<CallExpression> getDynamicFilterClauses(
                 JoinNode node,
-                List<CanonicalJoinNode.EquiJoinClause> equiJoinClauses,
+                List<ConnectorJoinNode.EquiJoinClause> equiJoinClauses,
                 List<RowExpression> joinFilter,
                 FunctionAndTypeManager functionAndTypeManager)
         {
@@ -713,7 +713,7 @@ public class PredicatePushDown
             // instead of separate ApplyDynamicFilters rule we derive dynamic filters within PredicatePushdown itself.
             // Even if equiJoinClauses.equals(node.getCriteria), current dynamic filters may not match equiJoinClauses
             ImmutableList.Builder<CallExpression> clausesBuilder = ImmutableList.builder();
-            for (CanonicalJoinNode.EquiJoinClause clause : equiJoinClauses) {
+            for (ConnectorJoinNode.EquiJoinClause clause : equiJoinClauses) {
                 VariableReferenceExpression probeSymbol = clause.getLeft();
                 VariableReferenceExpression buildSymbol = clause.getRight();
                 clausesBuilder.add(call(
@@ -1270,14 +1270,14 @@ public class PredicatePushDown
         private RowExpression extractJoinPredicate(JoinNode joinNode)
         {
             ImmutableList.Builder<RowExpression> builder = ImmutableList.builder();
-            for (CanonicalJoinNode.EquiJoinClause equiJoinClause : joinNode.getCriteria()) {
+            for (ConnectorJoinNode.EquiJoinClause equiJoinClause : joinNode.getCriteria()) {
                 builder.add(toRowExpression(equiJoinClause));
             }
             joinNode.getFilter().ifPresent(builder::add);
             return logicalRowExpressions.combineConjuncts(builder.build());
         }
 
-        private RowExpression toRowExpression(CanonicalJoinNode.EquiJoinClause equiJoinClause)
+        private RowExpression toRowExpression(ConnectorJoinNode.EquiJoinClause equiJoinClause)
         {
             return buildEqualsExpression(functionAndTypeManager, equiJoinClause.getLeft(), equiJoinClause.getRight());
         }
@@ -1286,11 +1286,11 @@ public class PredicatePushDown
         {
             checkArgument(EnumSet.of(INNER, RIGHT, LEFT, FULL).contains(node.getType()), "Unsupported join type: %s", node.getType());
 
-            if (node.getType() == CanonicalJoinNode.Type.INNER) {
+            if (node.getType() == ConnectorJoinNode.Type.INNER) {
                 return node;
             }
 
-            if (node.getType() == CanonicalJoinNode.Type.FULL) {
+            if (node.getType() == ConnectorJoinNode.Type.FULL) {
                 boolean canConvertToLeftJoin = canConvertOuterToInner(node.getLeft().getOutputVariables(), inheritedPredicate);
                 boolean canConvertToRightJoin = canConvertOuterToInner(node.getRight().getOutputVariables(), inheritedPredicate);
                 if (!canConvertToLeftJoin && !canConvertToRightJoin) {
@@ -1328,14 +1328,14 @@ public class PredicatePushDown
                 }
             }
 
-            if (node.getType() == CanonicalJoinNode.Type.LEFT && !canConvertOuterToInner(node.getRight().getOutputVariables(), inheritedPredicate) ||
-                    node.getType() == CanonicalJoinNode.Type.RIGHT && !canConvertOuterToInner(node.getLeft().getOutputVariables(), inheritedPredicate)) {
+            if (node.getType() == ConnectorJoinNode.Type.LEFT && !canConvertOuterToInner(node.getRight().getOutputVariables(), inheritedPredicate) ||
+                    node.getType() == ConnectorJoinNode.Type.RIGHT && !canConvertOuterToInner(node.getLeft().getOutputVariables(), inheritedPredicate)) {
                 return node;
             }
             return new JoinNode(
                     node.getSourceLocation(),
                     node.getId(),
-                    CanonicalJoinNode.Type.INNER,
+                    ConnectorJoinNode.Type.INNER,
                     node.getLeft(),
                     node.getRight(),
                     node.getCriteria(),

@@ -21,7 +21,7 @@ import com.facebook.presto.spi.VariableAllocator;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.AggregationNode.Aggregation;
 import com.facebook.presto.spi.plan.Assignments;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeIdAllocator;
 import com.facebook.presto.spi.plan.ProjectNode;
@@ -118,7 +118,7 @@ public class ScalarAggregationToJoinRewriter
         JoinNode leftOuterJoin = new JoinNode(
                 scalarAggregation.getSourceLocation(),
                 idAllocator.getNextId(),
-                CanonicalJoinNode.Type.LEFT,
+                ConnectorJoinNode.Type.LEFT,
                 inputWithUniqueColumns,
                 scalarAggregationSource,
                 ImmutableList.of(),

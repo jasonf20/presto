@@ -14,12 +14,13 @@
 package com.facebook.presto.sql.planner.optimizations;
 
 import com.facebook.presto.Session;
+import com.facebook.presto.common.type.BooleanType;
 import com.facebook.presto.spi.ConnectorId;
 import com.facebook.presto.spi.ConnectorPlanOptimizer;
 import com.facebook.presto.spi.VariableAllocator;
 import com.facebook.presto.spi.WarningCollector;
 import com.facebook.presto.spi.plan.AggregationNode;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.CteConsumerNode;
 import com.facebook.presto.spi.plan.CteProducerNode;
 import com.facebook.presto.spi.plan.CteReferenceNode;
@@ -36,6 +37,7 @@ import com.facebook.presto.spi.plan.TableScanNode;
 import com.facebook.presto.spi.plan.TopNNode;
 import com.facebook.presto.spi.plan.UnionNode;
 import com.facebook.presto.spi.plan.ValuesNode;
+import com.facebook.presto.spi.relation.SpecialFormExpression;
 import com.facebook.presto.sql.planner.TypeProvider;
 import com.facebook.presto.sql.planner.plan.JoinNode;
 import com.facebook.presto.sql.planner.plan.SimplePlanRewriter;
@@ -151,7 +153,7 @@ public class ApplyConnectorOptimization
                             "the connector optimizer from %s returns a node that does not cover all output before optimization",
                             connectorId);
 
-                    newNode = SimplePlanRewriter.rewriteWith(new CanonicalToInternalJoinRewriter(), newNode);
+                    newNode = SimplePlanRewriter.rewriteWith(new ConnectorToInternalJoinRewriter(), newNode);
 
                     updates.put(node, newNode);
                 }
@@ -300,28 +302,25 @@ public class ApplyConnectorOptimization
         return true;
     }
 
-    private static class CanonicalToInternalJoinRewriter
+    private static class ConnectorToInternalJoinRewriter
             extends SimplePlanRewriter<Void>
     {
         @Override
-        public PlanNode visitCanonicalJoinNode(CanonicalJoinNode node, RewriteContext<Void> context)
+        public PlanNode visitConnectorJoinNode(ConnectorJoinNode node, RewriteContext<Void> context)
         {
-            if (node.getType() == CanonicalJoinNode.Type.LEFT) {
-                return new JoinNode(node.getSourceLocation(),
-                        node.getId(),
-                        Optional.empty(),
-                        node.getType(),
-                        node.getSources().get(0),
-                        node.getSources().get(1),
-                        ImmutableList.copyOf(node.getCriteria()),
-                        node.getOutputVariables(),
-                        node.getFilters().stream().findFirst(), // TODO: Change to reduce
-                        Optional.empty(),
-                        Optional.empty(),
-                        Optional.empty(),
-                        Collections.emptyMap());
-            }
-            return super.visitCanonicalJoinNode(node, context);
+            return new JoinNode(node.getSourceLocation(),
+                    node.getId(),
+                    Optional.empty(),
+                    node.getType(),
+                    context.rewrite(node.getSources().get(0)),
+                    context.rewrite(node.getSources().get(1)),
+                    ImmutableList.copyOf(node.getCriteria()),
+                    node.getOutputVariables(),
+                    node.getFilters().stream().reduce((a, b) -> new SpecialFormExpression(SpecialFormExpression.Form.AND, BooleanType.BOOLEAN, a, b)),
+                    Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty(),
+                    Collections.emptyMap());
         }
     }
 }

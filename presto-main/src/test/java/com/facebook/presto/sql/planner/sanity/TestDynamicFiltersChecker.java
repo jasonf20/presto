@@ -18,7 +18,7 @@ import com.facebook.presto.metadata.Metadata;
 import com.facebook.presto.spi.ConnectorId;
 import com.facebook.presto.spi.TableHandle;
 import com.facebook.presto.spi.WarningCollector;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeIdAllocator;
 import com.facebook.presto.spi.plan.TableScanNode;
@@ -41,7 +41,7 @@ import org.testng.annotations.Test;
 import java.util.Optional;
 
 import static com.facebook.presto.common.type.BigintType.BIGINT;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.INNER;
 import static com.facebook.presto.sql.planner.optimizations.PredicatePushDown.createDynamicFilterExpression;
 
 public class TestDynamicFiltersChecker
@@ -90,7 +90,7 @@ public class TestDynamicFiltersChecker
                 INNER,
                 builder.filter(builder.rowExpression("ORDERS_OK > 0"), ordersTableScanNode),
                 lineitemTableScanNode,
-                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
+                ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
                 ImmutableList.of(ordersOrderKeyVariable),
                 Optional.empty(),
                 Optional.empty(),
@@ -110,7 +110,7 @@ public class TestDynamicFiltersChecker
                 builder.filter(
                         createDynamicFilterExpression("DF", ordersOrderKeyVariable, metadata.getFunctionAndTypeManager()),
                         lineitemTableScanNode),
-                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
+                ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
                 ImmutableList.of(ordersOrderKeyVariable),
                 Optional.empty(),
                 Optional.empty(),
@@ -133,7 +133,7 @@ public class TestDynamicFiltersChecker
                                         builder.rowExpression("LINEITEM_OK > 0"),
                                         createDynamicFilterExpression("DF", lineitemOrderKeyVariable, metadata.getFunctionAndTypeManager())),
                                 lineitemTableScanNode),
-                        ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
+                        ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
                         ImmutableList.of(ordersOrderKeyVariable),
                         Optional.empty(),
                         Optional.empty(),
@@ -160,7 +160,7 @@ public class TestDynamicFiltersChecker
                                                 builder.rowExpression("LINEITEM_OK IS NOT NULL"),
                                                 createDynamicFilterExpression("DF", lineitemOrderKeyVariable, metadata.getFunctionAndTypeManager()))),
                                 lineitemTableScanNode),
-                        ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
+                        ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(ordersOrderKeyVariable, lineitemOrderKeyVariable)),
                         ImmutableList.of(ordersOrderKeyVariable),
                         Optional.empty(),
                         Optional.empty(),

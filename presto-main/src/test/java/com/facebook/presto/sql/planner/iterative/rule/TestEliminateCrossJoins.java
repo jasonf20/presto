@@ -13,8 +13,8 @@
  */
 package com.facebook.presto.sql.planner.iterative.rule;
 
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
-import com.facebook.presto.spi.plan.CanonicalJoinNode.EquiJoinClause;
+import com.facebook.presto.spi.plan.ConnectorJoinNode.EquiJoinClause;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeIdAllocator;
 import com.facebook.presto.spi.plan.ProjectNode;
@@ -37,7 +37,7 @@ import java.util.function.Function;
 import static com.facebook.presto.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
 import static com.facebook.presto.common.function.OperatorType.NEGATION;
 import static com.facebook.presto.common.type.BigintType.BIGINT;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.INNER;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.any;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.join;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.node;
@@ -92,7 +92,7 @@ public class TestEliminateCrossJoins
     {
         tester().assertThat(new EliminateCrossJoins())
                 .setSystemProperty(JOIN_REORDERING_STRATEGY, "ELIMINATE_CROSS_JOINS")
-                .on(crossJoinAndJoin(CanonicalJoinNode.Type.LEFT))
+                .on(crossJoinAndJoin(ConnectorJoinNode.Type.LEFT))
                 .doesNotFire();
     }
 
@@ -227,7 +227,7 @@ public class TestEliminateCrossJoins
         assertEquals(JoinGraph.buildFrom(plan).size(), 2);
     }
 
-    private Function<PlanBuilder, PlanNode> crossJoinAndJoin(CanonicalJoinNode.Type secondJoinType)
+    private Function<PlanBuilder, PlanNode> crossJoinAndJoin(ConnectorJoinNode.Type secondJoinType)
     {
         return p -> {
             VariableReferenceExpression axVariable = p.variable("axVariable");
@@ -271,7 +271,7 @@ public class TestEliminateCrossJoins
         return new JoinNode(
                 Optional.empty(),
                 idAllocator.getNextId(),
-                CanonicalJoinNode.Type.INNER,
+                ConnectorJoinNode.Type.INNER,
                 left,
                 right,
                 criteria.build(),

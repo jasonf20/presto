@@ -37,7 +37,7 @@ import com.facebook.presto.spi.TableHandle;
 import com.facebook.presto.spi.function.FunctionHandle;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.Assignments;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.CteConsumerNode;
 import com.facebook.presto.spi.plan.CteProducerNode;
 import com.facebook.presto.spi.plan.CteReferenceNode;
@@ -503,7 +503,7 @@ public class PlanPrinter
         public Void visitJoin(JoinNode node, Void context)
         {
             List<String> joinExpressions = new ArrayList<>();
-            for (CanonicalJoinNode.EquiJoinClause clause : node.getCriteria()) {
+            for (ConnectorJoinNode.EquiJoinClause clause : node.getCriteria()) {
                 joinExpressions.add(JoinNodeUtils.toExpression(clause).toString());
             }
             node.getFilter().map(formatter::apply).ifPresent(joinExpressions::add);
@@ -603,7 +603,7 @@ public class PlanPrinter
         public Void visitMergeJoin(MergeJoinNode node, Void context)
         {
             List<String> joinExpressions = new ArrayList<>();
-            for (CanonicalJoinNode.EquiJoinClause clause : node.getCriteria()) {
+            for (ConnectorJoinNode.EquiJoinClause clause : node.getCriteria()) {
                 joinExpressions.add(JoinNodeUtils.toExpression(clause).toString());
             }
             node.getFilter().map(formatter::apply).ifPresent(joinExpressions::add);

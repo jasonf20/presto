@@ -16,8 +16,8 @@ package com.facebook.presto.cost;
 import com.facebook.presto.Session;
 import com.facebook.presto.common.function.OperatorType;
 import com.facebook.presto.metadata.MetadataManager;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
-import com.facebook.presto.spi.plan.CanonicalJoinNode.EquiJoinClause;
+import com.facebook.presto.spi.plan.ConnectorJoinNode.EquiJoinClause;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.google.common.collect.ImmutableList;
@@ -34,10 +34,10 @@ import static com.facebook.presto.common.type.IntegerType.INTEGER;
 import static com.facebook.presto.cost.FilterStatsCalculator.UNKNOWN_FILTER_COEFFICIENT;
 import static com.facebook.presto.cost.PlanNodeStatsAssertion.assertThat;
 import static com.facebook.presto.metadata.MetadataManager.createTestMetadataManager;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.FULL;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.INNER;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.LEFT;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.RIGHT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.FULL;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.LEFT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.relational.Expressions.constant;
 import static com.facebook.presto.testing.TestingSession.testSessionBuilder;
 import static java.lang.Double.NaN;
@@ -419,13 +419,13 @@ public class TestJoinStatsRule
                 .equalTo(addedStats);
     }
 
-    private void assertJoinStats(CanonicalJoinNode.Type joinType, PlanNodeStatsEstimate leftStats, PlanNodeStatsEstimate rightStats, PlanNodeStatsEstimate resultStats)
+    private void assertJoinStats(ConnectorJoinNode.Type joinType, PlanNodeStatsEstimate leftStats, PlanNodeStatsEstimate rightStats, PlanNodeStatsEstimate resultStats)
     {
         assertJoinStats(joinType, LEFT_JOIN_COLUMN, LEFT_OTHER_COLUMN, RIGHT_JOIN_COLUMN, RIGHT_OTHER_COLUMN, leftStats, rightStats, resultStats);
     }
 
     private void assertJoinStats(
-            CanonicalJoinNode.Type joinType,
+            ConnectorJoinNode.Type joinType,
             VariableReferenceExpression leftJoinColumn,
             VariableReferenceExpression leftOtherColumn,
             VariableReferenceExpression rightJoinColumn,
@@ -438,7 +438,7 @@ public class TestJoinStatsRule
     }
 
     private void assertJoinStats(
-            CanonicalJoinNode.Type joinType,
+            ConnectorJoinNode.Type joinType,
             VariableReferenceExpression leftJoinColumn,
             VariableReferenceExpression leftOtherColumn,
             VariableReferenceExpression rightJoinColumn,

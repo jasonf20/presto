@@ -36,7 +36,7 @@ import com.facebook.presto.spi.TableHandle;
 import com.facebook.presto.spi.VariableAllocator;
 import com.facebook.presto.spi.function.FunctionHandle;
 import com.facebook.presto.spi.function.StandardFunctionResolution;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.FilterNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeIdAllocator;
@@ -243,12 +243,12 @@ public class IcebergEqualityDeleteAsJoin
                         .putAll(deleteFields.stream().collect(Collectors.toMap(this::toVariableReference, this::toIcebergColumnHandle)))
                         .put(joinSequenceNumber, IcebergColumnHandle.dataSequenceNumberColumnHandle())
                         .build();
-                Set<CanonicalJoinNode.EquiJoinClause> clauses = deleteColumnAssignments.entrySet().stream()
+                Set<ConnectorJoinNode.EquiJoinClause> clauses = deleteColumnAssignments.entrySet().stream()
                         .filter(f -> !IcebergMetadataColumn.isMetadataColumnId(((IcebergColumnHandle) (f.getValue())).getId()))
                         .map(kvp -> {
                             VariableReferenceExpression left = reverseAssignmentsMap.get(((IcebergColumnHandle) (kvp.getValue())).getId());
                             VariableReferenceExpression right = kvp.getKey();
-                            return new CanonicalJoinNode.EquiJoinClause(left, right);
+                            return new ConnectorJoinNode.EquiJoinClause(left, right);
                         }).collect(Collectors.toSet());
                 VariableReferenceExpression sourceSequenceNumber = findMatchingVariable(parentJoin.getOutputVariables(), DATA_SEQUENCE_NUMBER.getColumnName());
                 FunctionHandle lessThan = functionResolution.comparisonFunction(OperatorType.LESS_THAN, BigintType.BIGINT, BigintType.BIGINT);
@@ -273,8 +273,10 @@ public class IcebergEqualityDeleteAsJoin
                         node.getCurrentConstraint(),
                         node.getEnforcedConstraint());
 
-                parentJoin = new CanonicalJoinNode(idAllocator.getNextId(), Arrays.asList(parentJoin, deleteTableScan),
-                        CanonicalJoinNode.Type.LEFT,
+                parentJoin = new ConnectorJoinNode(idAllocator.getNextId(),
+                        Arrays.asList(parentJoin, deleteTableScan),
+                        Optional.empty(),
+                        ConnectorJoinNode.Type.LEFT,
                         clauses,
                         Sets.newHashSet(versionFilter),
                         Stream.concat(parentJoin.getOutputVariables().stream(), deleteTableScan.getOutputVariables().stream()).collect(Collectors.toList()));
@@ -285,11 +287,6 @@ public class IcebergEqualityDeleteAsJoin
                             new SpecialFormExpression(SpecialFormExpression.Form.COALESCE, BigintType.BIGINT, deleteVersionColumns)));
 
             return filter;
-        }
-
-        private static IcebergColumnHandle toSyntheticColumnHandle(VariableReferenceExpression joinSequenceNumber)
-        {
-            return new IcebergColumnHandle(new ColumnIdentity(DATA_SEQUENCE_NUMBER.getId(), joinSequenceNumber.getName(), ColumnIdentity.TypeCategory.PRIMITIVE, Collections.emptyList()), joinSequenceNumber.getType(), Optional.empty(), IcebergColumnHandle.ColumnType.METADATA);
         }
 
         private VariableReferenceExpression toVariableReference(IcebergColumnHandle c)

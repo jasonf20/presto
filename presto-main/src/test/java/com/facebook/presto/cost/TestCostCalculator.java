@@ -32,7 +32,7 @@ import com.facebook.presto.spi.ConnectorId;
 import com.facebook.presto.spi.TableHandle;
 import com.facebook.presto.spi.WarningCollector;
 import com.facebook.presto.spi.plan.AggregationNode;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.plan.PlanNodeIdAllocator;
@@ -823,16 +823,16 @@ public class TestCostCalculator
     private JoinNode join(String planNodeId, PlanNode left, PlanNode right, JoinNode.DistributionType distributionType, String... symbols)
     {
         checkArgument(symbols.length % 2 == 0);
-        ImmutableList.Builder<CanonicalJoinNode.EquiJoinClause> criteria = ImmutableList.builder();
+        ImmutableList.Builder<ConnectorJoinNode.EquiJoinClause> criteria = ImmutableList.builder();
 
         for (int i = 0; i < symbols.length; i += 2) {
-            criteria.add(new CanonicalJoinNode.EquiJoinClause(new VariableReferenceExpression(Optional.empty(), symbols[i], BIGINT), new VariableReferenceExpression(Optional.empty(), symbols[i + 1], BIGINT)));
+            criteria.add(new ConnectorJoinNode.EquiJoinClause(new VariableReferenceExpression(Optional.empty(), symbols[i], BIGINT), new VariableReferenceExpression(Optional.empty(), symbols[i + 1], BIGINT)));
         }
 
         return new JoinNode(
                 Optional.empty(),
                 new PlanNodeId(planNodeId),
-                CanonicalJoinNode.Type.INNER,
+                ConnectorJoinNode.Type.INNER,
                 left,
                 right,
                 criteria.build(),

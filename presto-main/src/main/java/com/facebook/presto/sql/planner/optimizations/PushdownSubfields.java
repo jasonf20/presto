@@ -34,7 +34,7 @@ import com.facebook.presto.spi.function.LambdaArgumentDescriptor;
 import com.facebook.presto.spi.function.LambdaDescriptor;
 import com.facebook.presto.spi.function.StandardFunctionResolution;
 import com.facebook.presto.spi.plan.AggregationNode;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.CteProducerNode;
 import com.facebook.presto.spi.plan.DistinctLimitNode;
 import com.facebook.presto.spi.plan.FilterNode;
@@ -260,10 +260,10 @@ public class PushdownSubfields
         public PlanNode visitJoin(JoinNode node, RewriteContext<Context> context)
         {
             node.getCriteria().stream()
-                    .map(CanonicalJoinNode.EquiJoinClause::getLeft)
+                    .map(ConnectorJoinNode.EquiJoinClause::getLeft)
                     .forEach(context.get().variables::add);
             node.getCriteria().stream()
-                    .map(CanonicalJoinNode.EquiJoinClause::getRight)
+                    .map(ConnectorJoinNode.EquiJoinClause::getRight)
                     .forEach(context.get().variables::add);
 
             node.getFilter()

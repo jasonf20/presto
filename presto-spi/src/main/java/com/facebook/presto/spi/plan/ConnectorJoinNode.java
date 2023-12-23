@@ -13,7 +13,6 @@
  */
 package com.facebook.presto.spi.plan;
 
-import com.facebook.presto.spi.PrestoException;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -24,29 +23,28 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.facebook.presto.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-public class CanonicalJoinNode
+public class ConnectorJoinNode
         extends PlanNode
 {
     private final List<PlanNode> sources;
-    private final ConnectorJoinNode.Type type;
-    private final Set<ConnectorJoinNode.EquiJoinClause> criteria;
+    private final Type type;
+    private final Set<EquiJoinClause> criteria;
     private final Set<RowExpression> filters;
     private final List<VariableReferenceExpression> outputVariables;
 
-    @JsonCreator
-    public CanonicalJoinNode(
-            @JsonProperty("id") PlanNodeId id,
-            @JsonProperty("sources") List<PlanNode> sources,
-            @JsonProperty("type") ConnectorJoinNode.Type type,
-            @JsonProperty("criteria") Set<ConnectorJoinNode.EquiJoinClause> criteria,
-            @JsonProperty("filter") Set<RowExpression> filters,
-            @JsonProperty("outputVariables") List<VariableReferenceExpression> outputVariables)
+    public ConnectorJoinNode(
+            PlanNodeId id,
+            List<PlanNode> sources,
+            Optional<PlanNode> statsEquivalentPlanNode,
+            Type type,
+            Set<EquiJoinClause> criteria,
+            Set<RowExpression> filters,
+            List<VariableReferenceExpression> outputVariables)
     {
-        super(Optional.empty(), id, Optional.empty());
+        super(Optional.empty(), id, statsEquivalentPlanNode);
         this.sources = requireNonNull(sources, "sources is null");
         this.type = requireNonNull(type, "type is null");
         this.criteria = requireNonNull(criteria, "criteria is null");
@@ -62,13 +60,13 @@ public class CanonicalJoinNode
     }
 
     @JsonProperty
-    public ConnectorJoinNode.Type getType()
+    public Type getType()
     {
         return type;
     }
 
     @JsonProperty
-    public Set<ConnectorJoinNode.EquiJoinClause> getCriteria()
+    public Set<EquiJoinClause> getCriteria()
     {
         return criteria;
     }
@@ -90,14 +88,14 @@ public class CanonicalJoinNode
     @JsonProperty
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
-        return new CanonicalJoinNode(getId(), newChildren, type, criteria, filters, outputVariables);
+        return new ConnectorJoinNode(getId(), newChildren, getStatsEquivalentPlanNode(), type, criteria, filters, outputVariables);
     }
 
     @Override
     @JsonProperty
     public PlanNode assignStatsEquivalentPlanNode(Optional<PlanNode> statsEquivalentPlanNode)
     {
-        throw new PrestoException(GENERIC_INTERNAL_ERROR, format("Cannot assign canonical plan id to Canonical join node: %s", this));
+        return new ConnectorJoinNode(getId(), getSources(), getStatsEquivalentPlanNode(), getType(), getCriteria(), getFilters(), outputVariables);
     }
 
     @Override
@@ -109,7 +107,7 @@ public class CanonicalJoinNode
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        CanonicalJoinNode that = (CanonicalJoinNode) o;
+        ConnectorJoinNode that = (ConnectorJoinNode) o;
         return Objects.equals(sources, that.sources) &&
                 Objects.equals(type, that.type) &&
                 Objects.equals(criteria, that.criteria) &&
@@ -134,9 +132,101 @@ public class CanonicalJoinNode
                 ", outputVariables=" + outputVariables +
                 '}';
     }
+
     @Override
     public <R, C> R accept(PlanVisitor<R, C> visitor, C context)
     {
-        return visitor.visitCanonicalJoinNode(this, context);
+        return visitor.visitConnectorJoinNode(this, context);
+    }
+
+    public enum Type
+    {
+        INNER("InnerJoin"),
+        LEFT("LeftJoin"),
+        RIGHT("RightJoin"),
+        FULL("FullJoin");
+
+        private final String joinLabel;
+
+        Type(String joinLabel)
+        {
+            this.joinLabel = joinLabel;
+        }
+
+        public String getJoinLabel()
+        {
+            return joinLabel;
+        }
+
+        public boolean mustPartition()
+        {
+            // With REPLICATED, the unmatched rows from right-side would be duplicated.
+            return this == RIGHT || this == FULL;
+        }
+
+        public boolean mustReplicate(List<ConnectorJoinNode.EquiJoinClause> criteria)
+        {
+            // There is nothing to partition on
+            return criteria.isEmpty() && (this == INNER || this == LEFT);
+        }
+    }
+
+    public static class EquiJoinClause
+    {
+        private final VariableReferenceExpression left;
+        private final VariableReferenceExpression right;
+
+        @JsonCreator
+        public EquiJoinClause(@JsonProperty("left") VariableReferenceExpression left, @JsonProperty("right") VariableReferenceExpression right)
+        {
+            this.left = requireNonNull(left, "left is null");
+            this.right = requireNonNull(right, "right is null");
+        }
+
+        @JsonProperty
+        public VariableReferenceExpression getLeft()
+        {
+            return left;
+        }
+
+        @JsonProperty
+        public VariableReferenceExpression getRight()
+        {
+            return right;
+        }
+
+        public EquiJoinClause flip()
+        {
+            return new EquiJoinClause(right, left);
+        }
+
+        @Override
+        public boolean equals(Object obj)
+        {
+            if (this == obj) {
+                return true;
+            }
+
+            if (obj == null || !this.getClass().equals(obj.getClass())) {
+                return false;
+            }
+
+            EquiJoinClause other = (EquiJoinClause) obj;
+
+            return Objects.equals(this.left, other.left) &&
+                    Objects.equals(this.right, other.right);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(left, right);
+        }
+
+        @Override
+        public String toString()
+        {
+            return format("%s = %s", left, right);
+        }
     }
 }

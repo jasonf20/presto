@@ -13,7 +13,7 @@
  */
 package com.facebook.presto.sql.planner.iterative.rule;
 
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.planner.assertions.PlanMatchPattern;
@@ -46,7 +46,7 @@ public class TestPruneCrossJoinColumns
                         strictProject(
                                 ImmutableMap.of("rightValue", PlanMatchPattern.expression("rightValue")),
                                 join(
-                                        CanonicalJoinNode.Type.INNER,
+                                        ConnectorJoinNode.Type.INNER,
                                         ImmutableList.of(),
                                         Optional.empty(),
                                         strictProject(
@@ -65,7 +65,7 @@ public class TestPruneCrossJoinColumns
                         strictProject(
                                 ImmutableMap.of("leftValue", PlanMatchPattern.expression("leftValue")),
                                 join(
-                                        CanonicalJoinNode.Type.INNER,
+                                        ConnectorJoinNode.Type.INNER,
                                         ImmutableList.of(),
                                         Optional.empty(),
                                         values(ImmutableList.of("leftValue")),
@@ -94,7 +94,7 @@ public class TestPruneCrossJoinColumns
                                 .filter(projectionFilter)
                                 .collect(toImmutableList())),
                 p.join(
-                        CanonicalJoinNode.Type.INNER,
+                        ConnectorJoinNode.Type.INNER,
                         p.values(leftValue),
                         p.values(rightValue),
                         ImmutableList.of(),

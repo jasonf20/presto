@@ -14,7 +14,7 @@
 package com.facebook.presto.sql.planner.plan;
 
 import com.facebook.presto.spi.SourceLocation;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.relation.RowExpression;
@@ -54,7 +54,7 @@ public class SpatialJoinNode
             return joinLabel;
         }
 
-        public static Type fromJoinNodeType(CanonicalJoinNode.Type joinNodeType)
+        public static Type fromJoinNodeType(ConnectorJoinNode.Type joinNodeType)
         {
             switch (joinNodeType) {
                 case INNER:

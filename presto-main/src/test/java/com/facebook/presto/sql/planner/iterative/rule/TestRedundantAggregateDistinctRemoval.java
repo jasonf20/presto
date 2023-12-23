@@ -13,7 +13,7 @@
  */
 package com.facebook.presto.sql.planner.iterative.rule;
 
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.ProjectNode;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.planner.TestTableConstraintsConnectorFactory;
@@ -142,7 +142,7 @@ public class TestRedundantAggregateDistinctRemoval
                 .matches(output(anyTree(
                         aggregation(
                                 aggregations,
-                                join(CanonicalJoinNode.Type.INNER,
+                                join(ConnectorJoinNode.Type.INNER,
                                         ImmutableList.of(equiJoinClause("custkey", "custkey_0")),
                                         tableScan("orders", ImmutableMap.of("totalprice", "totalprice", "orderkey", "orderkey", "custkey", "custkey")),
                                         tableScan("customer", ImmutableMap.of("custkey_0", "custkey")))))));

@@ -14,7 +14,7 @@
 package com.facebook.presto.sql.planner.plan;
 
 import com.facebook.presto.spi.SourceLocation;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
@@ -43,17 +43,17 @@ public class LateralJoinNode
 {
     public enum Type
     {
-        INNER(CanonicalJoinNode.Type.INNER),
-        LEFT(CanonicalJoinNode.Type.LEFT);
+        INNER(ConnectorJoinNode.Type.INNER),
+        LEFT(ConnectorJoinNode.Type.LEFT);
 
-        Type(CanonicalJoinNode.Type joinNodeType)
+        Type(ConnectorJoinNode.Type joinNodeType)
         {
             this.joinNodeType = joinNodeType;
         }
 
-        private final CanonicalJoinNode.Type joinNodeType;
+        private final ConnectorJoinNode.Type joinNodeType;
 
-        public CanonicalJoinNode.Type toJoinNodeType()
+        public ConnectorJoinNode.Type toJoinNodeType()
         {
             return joinNodeType;
         }

@@ -19,7 +19,7 @@ import com.facebook.presto.matching.Captures;
 import com.facebook.presto.matching.Pattern;
 import com.facebook.presto.metadata.FunctionAndTypeManager;
 import com.facebook.presto.spi.plan.Assignments;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.FilterNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.ProjectNode;
@@ -84,7 +84,7 @@ public class LeftJoinNullFilterToSemiJoin
         implements Rule<FilterNode>
 {
     private static final Capture<JoinNode> CHILD = newCapture();
-    private static final Pattern<FilterNode> PATTERN = filter().with(source().matching(join().matching(x -> x.getType().equals(CanonicalJoinNode.Type.LEFT)
+    private static final Pattern<FilterNode> PATTERN = filter().with(source().matching(join().matching(x -> x.getType().equals(ConnectorJoinNode.Type.LEFT)
             && x.getCriteria().size() == 1 && !x.getFilter().isPresent() && x.getDynamicFilters().isEmpty()).capturedAs(CHILD)));
     private final FunctionAndTypeManager functionAndTypeManager;
 

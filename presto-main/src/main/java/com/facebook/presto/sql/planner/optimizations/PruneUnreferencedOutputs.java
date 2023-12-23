@@ -20,7 +20,7 @@ import com.facebook.presto.spi.WarningCollector;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.AggregationNode.Aggregation;
 import com.facebook.presto.spi.plan.Assignments;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.CteConsumerNode;
 import com.facebook.presto.spi.plan.CteProducerNode;
 import com.facebook.presto.spi.plan.DistinctLimitNode;
@@ -215,7 +215,7 @@ public class PruneUnreferencedOutputs
             }
 
             ImmutableSet.Builder<VariableReferenceExpression> leftInputsBuilder = ImmutableSet.builder();
-            leftInputsBuilder.addAll(context.get()).addAll(Iterables.transform(node.getCriteria(), CanonicalJoinNode.EquiJoinClause::getLeft));
+            leftInputsBuilder.addAll(context.get()).addAll(Iterables.transform(node.getCriteria(), ConnectorJoinNode.EquiJoinClause::getLeft));
             if (node.getLeftHashVariable().isPresent()) {
                 leftInputsBuilder.add(node.getLeftHashVariable().get());
             }
@@ -223,7 +223,7 @@ public class PruneUnreferencedOutputs
             Set<VariableReferenceExpression> leftInputs = leftInputsBuilder.build();
 
             ImmutableSet.Builder<VariableReferenceExpression> rightInputsBuilder = ImmutableSet.builder();
-            rightInputsBuilder.addAll(context.get()).addAll(Iterables.transform(node.getCriteria(), CanonicalJoinNode.EquiJoinClause::getRight));
+            rightInputsBuilder.addAll(context.get()).addAll(Iterables.transform(node.getCriteria(), ConnectorJoinNode.EquiJoinClause::getRight));
             if (node.getRightHashVariable().isPresent()) {
                 rightInputsBuilder.add(node.getRightHashVariable().get());
             }

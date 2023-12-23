@@ -15,7 +15,7 @@ package com.facebook.presto.sql.planner.iterative.rule;
 
 import com.facebook.presto.common.type.ArrayType;
 import com.facebook.presto.spi.plan.Assignments;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.FilterNode;
 import com.facebook.presto.spi.plan.ProjectNode;
 import com.facebook.presto.spi.plan.ValuesNode;
@@ -48,7 +48,7 @@ public class TestCrossJoinWithArrayNotContainsToAntiJoin
                     p.variable("right_k1", BIGINT);
                     return p.filter(
                             p.rowExpression("not contains(left_array_k1, right_k1)"),
-                            p.join(CanonicalJoinNode.Type.INNER,
+                            p.join(ConnectorJoinNode.Type.INNER,
                                     p.enforceSingleRow(p.values(p.variable("left_array_k1", new ArrayType(BIGINT)))),
                                     p.values(p.variable("right_k1"))));
                 })
@@ -72,7 +72,7 @@ public class TestCrossJoinWithArrayNotContainsToAntiJoin
                     p.variable("right_array_k1", new ArrayType(BIGINT));
                     return p.filter(
                             p.rowExpression("not contains(right_array_k1, left_k1)"),
-                            p.join(CanonicalJoinNode.Type.INNER,
+                            p.join(ConnectorJoinNode.Type.INNER,
                                     p.values(p.variable("left_k1")),
                                     p.enforceSingleRow(p.values(p.variable("right_array_k1", new ArrayType(BIGINT))))));
                 })
@@ -96,7 +96,7 @@ public class TestCrossJoinWithArrayNotContainsToAntiJoin
                     p.variable("right_k2", BIGINT);
                     return p.filter(
                             p.rowExpression("not contains(left_array_k1, right_k1) and right_k2>1"),
-                            p.join(CanonicalJoinNode.Type.INNER,
+                            p.join(ConnectorJoinNode.Type.INNER,
                                     p.enforceSingleRow(p.values(p.variable("left_array_k1", new ArrayType(BIGINT)))),
                                     p.values(p.variable("right_k1"), p.variable("right_k2"))));
                 })
@@ -125,7 +125,7 @@ public class TestCrossJoinWithArrayNotContainsToAntiJoin
                     p.variable("right_k2", BIGINT);
                     return p.filter(
                             p.rowExpression("not contains(cast(json_parse(json_string) as array<bigint>), right_k1)"),
-                            p.join(CanonicalJoinNode.Type.INNER,
+                            p.join(ConnectorJoinNode.Type.INNER,
                                     p.project(p.enforceSingleRow(p.values(p.variable("x", VARCHAR))),
                                             Assignments.builder()
                                                     .put(p.variable("json_string", VARCHAR), p.rowExpression("x"))
@@ -157,7 +157,7 @@ public class TestCrossJoinWithArrayNotContainsToAntiJoin
                     p.variable("right_array_k2", new ArrayType(BIGINT));
                     return p.filter(
                             p.rowExpression("not contains(left_array_k1, right_k1) or not contains(right_array_k2, left_k2)"),
-                            p.join(CanonicalJoinNode.Type.INNER,
+                            p.join(ConnectorJoinNode.Type.INNER,
                                     p.enforceSingleRow(p.values(p.variable("left_array_k1", new ArrayType(BIGINT)), p.variable("left_k2"))),
                                     p.values(p.variable("right_k1"), p.variable("right_array_k2", new ArrayType(BIGINT)))));
                 }).doesNotFire();
@@ -174,7 +174,7 @@ public class TestCrossJoinWithArrayNotContainsToAntiJoin
                     p.variable("right_k1", DOUBLE);
                     return p.filter(
                             p.rowExpression("not contains(left_array_k1, right_k1)"),
-                            p.join(CanonicalJoinNode.Type.INNER,
+                            p.join(ConnectorJoinNode.Type.INNER,
                                     p.enforceSingleRow(p.values(p.variable("left_array_k1", new ArrayType(DOUBLE)))),
                                     p.values(p.variable("right_k1", DOUBLE))));
                 }).doesNotFire();
@@ -191,7 +191,7 @@ public class TestCrossJoinWithArrayNotContainsToAntiJoin
                     p.variable("right_k1", VARCHAR);
                     return p.filter(
                             p.rowExpression("not contains(left_array_k1, CAST(right_k1 AS BIGINT))"),
-                            p.join(CanonicalJoinNode.Type.INNER,
+                            p.join(ConnectorJoinNode.Type.INNER,
                                     p.enforceSingleRow(p.values(p.variable("left_k1", new ArrayType(BIGINT)))),
                                     p.values(p.variable("right_k1", VARCHAR))));
                 }).doesNotFire();
@@ -208,7 +208,7 @@ public class TestCrossJoinWithArrayNotContainsToAntiJoin
                     p.variable("right_k1", BIGINT);
                     return p.filter(
                             p.rowExpression("not contains(left_array_k1, right_k1)"),
-                            p.join(CanonicalJoinNode.Type.INNER,
+                            p.join(ConnectorJoinNode.Type.INNER,
                                     p.values(ImmutableList.of(p.variable("left_array_k1", new ArrayType(BIGINT))),
                                             ImmutableList.of(constantExpressions(BIGINT, 50L), constantExpressions(BIGINT, 11L))),
                                     p.values(p.variable("right_k1"))));
@@ -229,7 +229,7 @@ public class TestCrossJoinWithArrayNotContainsToAntiJoin
                     p.variable("right_array_k2", new ArrayType(BIGINT));
                     return p.filter(
                             p.rowExpression("not contains(left_array_k1, right_k1)"),
-                            p.join(CanonicalJoinNode.Type.INNER,
+                            p.join(ConnectorJoinNode.Type.INNER,
                                     p.values(p.variable("left_array_k1", new ArrayType(BIGINT)), p.variable("left_k2")),
                                     p.values(p.variable("right_k1"), p.variable("right_array_k2", new ArrayType(BIGINT)))));
                 })
@@ -248,7 +248,7 @@ public class TestCrossJoinWithArrayNotContainsToAntiJoin
                     p.variable("right_k1", VARCHAR);
                     return p.filter(
                             p.rowExpression("not contains(transform(left_array_k1, x->lower(x)), right_k1)"),
-                            p.join(CanonicalJoinNode.Type.INNER,
+                            p.join(ConnectorJoinNode.Type.INNER,
                                     p.enforceSingleRow(p.values(p.variable("left_array_k1", new ArrayType(VARCHAR)))),
                                     p.values(p.variable("right_k1", VARCHAR))));
                 })

@@ -18,8 +18,8 @@ import com.facebook.presto.matching.Captures;
 import com.facebook.presto.matching.Pattern;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.Assignments;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
-import com.facebook.presto.spi.plan.CanonicalJoinNode.EquiJoinClause;
+import com.facebook.presto.spi.plan.ConnectorJoinNode.EquiJoinClause;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.ProjectNode;
 import com.facebook.presto.spi.relation.InSubqueryExpression;
@@ -128,7 +128,7 @@ public class TransformUncorrelatedInPredicateSubqueryToDistinctInnerJoin
         JoinNode innerJoin = new JoinNode(
                 applyNode.getSourceLocation(),
                 context.getIdAllocator().getNextId(),
-                CanonicalJoinNode.Type.INNER,
+                ConnectorJoinNode.Type.INNER,
                 leftInput,
                 applyNode.getSubquery(),
                 ImmutableList.of(new EquiJoinClause(

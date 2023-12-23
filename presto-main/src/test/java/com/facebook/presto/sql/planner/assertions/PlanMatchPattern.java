@@ -21,7 +21,7 @@ import com.facebook.presto.cost.StatsProvider;
 import com.facebook.presto.metadata.Metadata;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.AggregationNode.Step;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.CteConsumerNode;
 import com.facebook.presto.spi.plan.CteProducerNode;
 import com.facebook.presto.spi.plan.ExceptNode;
@@ -398,17 +398,17 @@ public final class PlanMatchPattern
         return node(JoinNode.class, left, right);
     }
 
-    public static PlanMatchPattern join(CanonicalJoinNode.Type joinType, List<ExpectedValueProvider<CanonicalJoinNode.EquiJoinClause>> expectedEquiCriteria, PlanMatchPattern left, PlanMatchPattern right)
+    public static PlanMatchPattern join(ConnectorJoinNode.Type joinType, List<ExpectedValueProvider<ConnectorJoinNode.EquiJoinClause>> expectedEquiCriteria, PlanMatchPattern left, PlanMatchPattern right)
     {
         return join(joinType, expectedEquiCriteria, Optional.empty(), left, right);
     }
 
-    public static PlanMatchPattern join(CanonicalJoinNode.Type joinType, List<ExpectedValueProvider<CanonicalJoinNode.EquiJoinClause>> expectedEquiCriteria, Optional<String> expectedFilter, PlanMatchPattern left, PlanMatchPattern right)
+    public static PlanMatchPattern join(ConnectorJoinNode.Type joinType, List<ExpectedValueProvider<ConnectorJoinNode.EquiJoinClause>> expectedEquiCriteria, Optional<String> expectedFilter, PlanMatchPattern left, PlanMatchPattern right)
     {
         return join(joinType, expectedEquiCriteria, expectedFilter, Optional.empty(), left, right);
     }
 
-    public static PlanMatchPattern join(CanonicalJoinNode.Type joinType, List<ExpectedValueProvider<CanonicalJoinNode.EquiJoinClause>> expectedEquiCriteria, Optional<String> expectedFilter, Optional<JoinNode.DistributionType> expectedDistributionType, PlanMatchPattern left, PlanMatchPattern right)
+    public static PlanMatchPattern join(ConnectorJoinNode.Type joinType, List<ExpectedValueProvider<ConnectorJoinNode.EquiJoinClause>> expectedEquiCriteria, Optional<String> expectedFilter, Optional<JoinNode.DistributionType> expectedDistributionType, PlanMatchPattern left, PlanMatchPattern right)
     {
         return node(JoinNode.class, left, right).with(
                 new JoinMatcher(
@@ -420,8 +420,8 @@ public final class PlanMatchPattern
     }
 
     public static PlanMatchPattern join(
-            CanonicalJoinNode.Type joinType,
-            List<ExpectedValueProvider<CanonicalJoinNode.EquiJoinClause>> expectedEquiCriteria,
+            ConnectorJoinNode.Type joinType,
+            List<ExpectedValueProvider<ConnectorJoinNode.EquiJoinClause>> expectedEquiCriteria,
             Map<String, String> expectedDynamicFilter,
             Optional<String> expectedStaticFilter,
             PlanMatchPattern leftSource,
@@ -477,7 +477,7 @@ public final class PlanMatchPattern
                 new SpatialJoinMatcher(SpatialJoinNode.Type.LEFT, rewriteIdentifiersToSymbolReferences(new SqlParser().createExpression(expectedFilter, new ParsingOptions())), Optional.empty()));
     }
 
-    public static PlanMatchPattern mergeJoin(CanonicalJoinNode.Type joinType, List<ExpectedValueProvider<CanonicalJoinNode.EquiJoinClause>> expectedEquiCriteria, Optional<Expression> filter, PlanMatchPattern left, PlanMatchPattern right)
+    public static PlanMatchPattern mergeJoin(ConnectorJoinNode.Type joinType, List<ExpectedValueProvider<ConnectorJoinNode.EquiJoinClause>> expectedEquiCriteria, Optional<Expression> filter, PlanMatchPattern left, PlanMatchPattern right)
     {
         return node(MergeJoinNode.class, left, right).with(
                 new MergeJoinMatcher(
@@ -533,7 +533,7 @@ public final class PlanMatchPattern
         return node(ExceptNode.class, sources);
     }
 
-    public static ExpectedValueProvider<CanonicalJoinNode.EquiJoinClause> equiJoinClause(String left, String right)
+    public static ExpectedValueProvider<ConnectorJoinNode.EquiJoinClause> equiJoinClause(String left, String right)
     {
         return new EquiJoinClauseProvider(new SymbolAlias(left), new SymbolAlias(right));
     }

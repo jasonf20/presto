@@ -14,7 +14,7 @@
 package com.facebook.presto.sql.planner.iterative.properties;
 
 import com.facebook.presto.spi.plan.Assignments;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.LogicalProperties;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
@@ -28,10 +28,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.FULL;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.INNER;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.LEFT;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.RIGHT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.FULL;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.LEFT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.iterative.properties.Key.getNormalizedKey;
 import static com.facebook.presto.sql.planner.iterative.properties.KeyProperty.combineKey;
 import static com.facebook.presto.sql.planner.iterative.properties.KeyProperty.combineKeys;
@@ -369,8 +369,8 @@ public class LogicalPropertiesImpl
      */
     public static LogicalPropertiesImpl joinProperties(LogicalPropertiesImpl leftProperties,
                                                        LogicalPropertiesImpl rightProperties,
-                                                       List<CanonicalJoinNode.EquiJoinClause> equijoinPredicates,
-                                                       CanonicalJoinNode.Type joinType,
+                                                       List<ConnectorJoinNode.EquiJoinClause> equijoinPredicates,
+                                                       ConnectorJoinNode.Type joinType,
                                                        Optional<RowExpression> filterPredicate,
                                                        FunctionResolution functionResolution)
     {
@@ -381,8 +381,8 @@ public class LogicalPropertiesImpl
         // first determine if the join is n to 1 and/or 1 to n
         boolean nToOne = false;
         boolean oneToN = false;
-        Set<VariableReferenceExpression> rightJoinVariables = equijoinPredicates.stream().map(CanonicalJoinNode.EquiJoinClause::getRight).collect(Collectors.toSet());
-        Set<VariableReferenceExpression> leftJoinVariables = equijoinPredicates.stream().map(CanonicalJoinNode.EquiJoinClause::getLeft).collect(Collectors.toSet());
+        Set<VariableReferenceExpression> rightJoinVariables = equijoinPredicates.stream().map(ConnectorJoinNode.EquiJoinClause::getRight).collect(Collectors.toSet());
+        Set<VariableReferenceExpression> leftJoinVariables = equijoinPredicates.stream().map(ConnectorJoinNode.EquiJoinClause::getLeft).collect(Collectors.toSet());
 
         //if n-to-1 inner or left join then propagate left source keys and maxcard
         if ((rightProperties.maxCardProperty.isAtMostOne() || (!rightJoinVariables.isEmpty() && rightProperties.isDistinct(rightJoinVariables))) &&
@@ -422,7 +422,7 @@ public class LogicalPropertiesImpl
 
         //update equivalence classes with equijoin predicates, note that if nulls are injected, equivalence does not hold propagate
         if (joinType == INNER) {
-            for (CanonicalJoinNode.EquiJoinClause equiJoinClause : equijoinPredicates) {
+            for (ConnectorJoinNode.EquiJoinClause equiJoinClause : equijoinPredicates) {
                 equivalenceClassProperty = equivalenceClassProperty.combineWith(equiJoinClause.getLeft(), equiJoinClause.getRight());
             }
 

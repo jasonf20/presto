@@ -13,7 +13,7 @@
  */
 package com.facebook.presto.sql.planner.iterative.rule;
 
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.planner.assertions.PlanMatchPattern;
@@ -44,7 +44,7 @@ public class TestPruneJoinChildrenColumns
                 .on(p -> buildJoin(p, variable -> variable.getName().equals("leftValue")))
                 .matches(
                         join(
-                                CanonicalJoinNode.Type.INNER,
+                                ConnectorJoinNode.Type.INNER,
                                 ImmutableList.of(equiJoinClause("leftKey", "rightKey")),
                                 Optional.of("leftValue > 5"),
                                 values("leftKey", "leftKeyHash", "leftValue"),
@@ -71,7 +71,7 @@ public class TestPruneJoinChildrenColumns
                     VariableReferenceExpression leftValue = p.variable("leftValue");
                     VariableReferenceExpression rightValue = p.variable("rightValue");
                     return p.join(
-                            CanonicalJoinNode.Type.INNER,
+                            ConnectorJoinNode.Type.INNER,
                             p.values(leftValue),
                             p.values(rightValue),
                             ImmutableList.of(),
@@ -93,10 +93,10 @@ public class TestPruneJoinChildrenColumns
         VariableReferenceExpression rightValue = p.variable("rightValue");
         List<VariableReferenceExpression> outputs = ImmutableList.of(leftValue, rightValue);
         return p.join(
-                CanonicalJoinNode.Type.INNER,
+                ConnectorJoinNode.Type.INNER,
                 p.values(leftKey, leftKeyHash, leftValue),
                 p.values(rightKey, rightKeyHash, rightValue),
-                ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(leftKey, rightKey)),
+                ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(leftKey, rightKey)),
                 outputs.stream()
                         .filter(joinOutputFilter)
                         .collect(toImmutableList()),

@@ -13,7 +13,7 @@
  */
 package com.facebook.presto.sql.planner.iterative.rule;
 
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.planner.iterative.rule.test.BaseRuleTest;
 import com.google.common.collect.ImmutableList;
@@ -47,16 +47,16 @@ public class TestRemoveRedundantCastToVarcharInJoinClause
                     VariableReferenceExpression leftCast = p.variable("left_cast", VARCHAR);
                     VariableReferenceExpression rightCast = p.variable("right_cast", VARCHAR);
                     return p.join(
-                            CanonicalJoinNode.Type.INNER,
+                            ConnectorJoinNode.Type.INNER,
                             p.project(assignment(leftCast, p.rowExpression("cast(left_bigint as varchar)")),
                                     p.values(leftBigint)),
                             p.project(assignment(rightCast, p.rowExpression("cast(right_bigint as varchar)")),
                                     p.values(rightBigint)),
-                            new CanonicalJoinNode.EquiJoinClause(leftCast, rightCast));
+                            new ConnectorJoinNode.EquiJoinClause(leftCast, rightCast));
                 })
                 .matches(
                         join(
-                                CanonicalJoinNode.Type.INNER,
+                                ConnectorJoinNode.Type.INNER,
                                 ImmutableList.of(equiJoinClause("new_left", "new_right")),
                                 project(
                                         ImmutableMap.of("new_left", expression("left_bigint")),
@@ -77,12 +77,12 @@ public class TestRemoveRedundantCastToVarcharInJoinClause
                     VariableReferenceExpression leftCast = p.variable("left_cast", BIGINT);
                     VariableReferenceExpression rightCast = p.variable("right_cast", BIGINT);
                     return p.join(
-                            CanonicalJoinNode.Type.INNER,
+                            ConnectorJoinNode.Type.INNER,
                             p.project(assignment(leftCast, p.rowExpression("cast(left_bigint as varchar)")),
                                     p.values(leftBigint)),
                             p.project(assignment(rightCast, p.rowExpression("cast(right_bigint as varchar)")),
                                     p.values(rightBigint)),
-                            new CanonicalJoinNode.EquiJoinClause(leftCast, rightCast));
+                            new ConnectorJoinNode.EquiJoinClause(leftCast, rightCast));
                 }).doesNotFire();
     }
 
@@ -96,11 +96,11 @@ public class TestRemoveRedundantCastToVarcharInJoinClause
                     VariableReferenceExpression leftCast = p.variable("left_cast", VARCHAR);
                     VariableReferenceExpression rightCast = p.variable("right_cast", VARCHAR);
                     return p.join(
-                            CanonicalJoinNode.Type.INNER,
+                            ConnectorJoinNode.Type.INNER,
                             p.values(leftCast),
                             p.project(assignment(rightCast, p.rowExpression("cast(right_bigint as varchar)")),
                                     p.values(rightBigint)),
-                            new CanonicalJoinNode.EquiJoinClause(leftCast, rightCast));
+                            new ConnectorJoinNode.EquiJoinClause(leftCast, rightCast));
                 }).doesNotFire();
     }
 
@@ -115,12 +115,12 @@ public class TestRemoveRedundantCastToVarcharInJoinClause
                     VariableReferenceExpression leftCast = p.variable("left_cast", VARCHAR);
                     VariableReferenceExpression rightCast = p.variable("right_cast", VARCHAR);
                     return p.join(
-                            CanonicalJoinNode.Type.INNER,
+                            ConnectorJoinNode.Type.INNER,
                             p.project(assignment(leftCast, p.rowExpression("cast(left_bigint as varchar)")),
                                     p.values(leftBigint)),
                             p.project(assignment(rightCast, p.rowExpression("cast(right_bigint as varchar)")),
                                     p.values(rightBigint)),
-                            new CanonicalJoinNode.EquiJoinClause(leftCast, rightCast));
+                            new ConnectorJoinNode.EquiJoinClause(leftCast, rightCast));
                 }).doesNotFire();
     }
 }

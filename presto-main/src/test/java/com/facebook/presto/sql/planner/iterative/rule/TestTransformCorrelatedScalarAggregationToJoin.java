@@ -13,7 +13,7 @@
  */
 package com.facebook.presto.sql.planner.iterative.rule;
 
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.sql.planner.iterative.rule.test.BaseRuleTest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -89,7 +89,7 @@ public class TestTransformCorrelatedScalarAggregationToJoin
                 .matches(
                         project(ImmutableMap.of("sum_1", expression("sum_1"), "corr", expression("corr")),
                                 aggregation(ImmutableMap.of("sum_1", functionCall("sum", ImmutableList.of("a"))),
-                                        join(CanonicalJoinNode.Type.LEFT,
+                                        join(ConnectorJoinNode.Type.LEFT,
                                                 ImmutableList.of(),
                                                 assignUniqueId("unique",
                                                         values(ImmutableMap.of("corr", 0))),
@@ -113,7 +113,7 @@ public class TestTransformCorrelatedScalarAggregationToJoin
                 .matches(
                         project(ImmutableMap.of("corr", expression("corr"), "expr", expression("(\"sum_1\" + 1)")),
                                 aggregation(ImmutableMap.of("sum_1", functionCall("sum", ImmutableList.of("a"))),
-                                        join(CanonicalJoinNode.Type.LEFT,
+                                        join(ConnectorJoinNode.Type.LEFT,
                                                 ImmutableList.of(),
                                                 assignUniqueId("unique",
                                                         values(ImmutableMap.of("corr", 0))),

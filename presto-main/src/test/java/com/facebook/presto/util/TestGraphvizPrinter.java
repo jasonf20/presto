@@ -18,7 +18,7 @@ import com.facebook.presto.cost.StatsAndCosts;
 import com.facebook.presto.spi.ConnectorId;
 import com.facebook.presto.spi.ConnectorTableHandle;
 import com.facebook.presto.spi.TableHandle;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.plan.TableScanNode;
@@ -154,7 +154,7 @@ public class TestGraphvizPrinter
         PlanNode node = new JoinNode(
                 Optional.empty(),
                 new PlanNodeId("join"),
-                CanonicalJoinNode.Type.INNER,
+                ConnectorJoinNode.Type.INNER,
                 TEST_TABLE_SCAN_NODE, //Left : Probe side
                 valuesNode, //Right : Build side
                 Collections.emptyList(), //No Criteria

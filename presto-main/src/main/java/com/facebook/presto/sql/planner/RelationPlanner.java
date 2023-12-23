@@ -28,7 +28,7 @@ import com.facebook.presto.spi.VariableAllocator;
 import com.facebook.presto.spi.constraints.TableConstraint;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.Assignments;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.CteReferenceNode;
 import com.facebook.presto.spi.plan.ExceptNode;
 import com.facebook.presto.spi.plan.FilterNode;
@@ -304,7 +304,7 @@ class RelationPlanner
                 .addAll(rightPlan.getFieldMappings())
                 .build();
 
-        ImmutableList.Builder<CanonicalJoinNode.EquiJoinClause> equiClauses = ImmutableList.builder();
+        ImmutableList.Builder<ConnectorJoinNode.EquiJoinClause> equiClauses = ImmutableList.builder();
         List<Expression> complexJoinExpressions = new ArrayList<>();
         List<Expression> postInnerJoinConditions = new ArrayList<>();
 
@@ -372,7 +372,7 @@ class RelationPlanner
                     VariableReferenceExpression leftVariable = leftPlanBuilder.translateToVariable(leftComparisonExpressions.get(i));
                     VariableReferenceExpression rightVariable = rightPlanBuilder.translateToVariable(rightComparisonExpressions.get(i));
 
-                    equiClauses.add(new CanonicalJoinNode.EquiJoinClause(leftVariable, rightVariable));
+                    equiClauses.add(new ConnectorJoinNode.EquiJoinClause(leftVariable, rightVariable));
                 }
                 else {
                     Expression leftExpression = leftPlanBuilder.rewrite(leftComparisonExpressions.get(i));
@@ -520,7 +520,7 @@ class RelationPlanner
 
         Analysis.JoinUsingAnalysis joinAnalysis = analysis.getJoinUsing(node);
 
-        ImmutableList.Builder<CanonicalJoinNode.EquiJoinClause> clauses = ImmutableList.builder();
+        ImmutableList.Builder<ConnectorJoinNode.EquiJoinClause> clauses = ImmutableList.builder();
 
         Map<Identifier, VariableReferenceExpression> leftJoinColumns = new HashMap<>();
         Map<Identifier, VariableReferenceExpression> rightJoinColumns = new HashMap<>();
@@ -560,7 +560,7 @@ class RelationPlanner
                     context));
             rightJoinColumns.put(identifier, rightOutput);
 
-            clauses.add(new CanonicalJoinNode.EquiJoinClause(leftOutput, rightOutput));
+            clauses.add(new ConnectorJoinNode.EquiJoinClause(leftOutput, rightOutput));
         }
 
         ProjectNode leftCoercion = new ProjectNode(idAllocator.getNextId(), left.getRoot(), leftCoercions.build());

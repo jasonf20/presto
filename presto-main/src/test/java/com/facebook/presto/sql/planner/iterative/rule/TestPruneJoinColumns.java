@@ -14,7 +14,7 @@
 package com.facebook.presto.sql.planner.iterative.rule;
 
 import com.facebook.presto.spi.plan.Assignments;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.planner.assertions.PlanMatchPattern;
@@ -48,7 +48,7 @@ public class TestPruneJoinColumns
                         strictProject(
                                 ImmutableMap.of("rightValue", PlanMatchPattern.expression("rightValue")),
                                 join(
-                                        CanonicalJoinNode.Type.INNER,
+                                        ConnectorJoinNode.Type.INNER,
                                         ImmutableList.of(equiJoinClause("leftKey", "rightKey")),
                                         Optional.empty(),
                                         values(ImmutableList.of("leftKey", "leftValue")),
@@ -74,7 +74,7 @@ public class TestPruneJoinColumns
                     return p.project(
                             Assignments.of(),
                             p.join(
-                                    CanonicalJoinNode.Type.INNER,
+                                    ConnectorJoinNode.Type.INNER,
                                     p.values(leftValue),
                                     p.values(rightValue),
                                     ImmutableList.of(),
@@ -99,10 +99,10 @@ public class TestPruneJoinColumns
                                 .filter(projectionFilter)
                                 .collect(toImmutableList())),
                 p.join(
-                        CanonicalJoinNode.Type.INNER,
+                        ConnectorJoinNode.Type.INNER,
                         p.values(leftKey, leftValue),
                         p.values(rightKey, rightValue),
-                        ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(leftKey, rightKey)),
+                        ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(leftKey, rightKey)),
                         outputs,
                         Optional.empty(),
                         Optional.empty(),

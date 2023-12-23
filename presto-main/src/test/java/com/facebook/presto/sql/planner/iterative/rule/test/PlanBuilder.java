@@ -31,7 +31,7 @@ import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.AggregationNode.Aggregation;
 import com.facebook.presto.spi.plan.AggregationNode.Step;
 import com.facebook.presto.spi.plan.Assignments;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.DistinctLimitNode;
 import com.facebook.presto.spi.plan.ExceptNode;
 import com.facebook.presto.spi.plan.FilterNode;
@@ -759,17 +759,17 @@ public class PlanBuilder
         }
     }
 
-    public JoinNode join(CanonicalJoinNode.Type joinType, PlanNode left, PlanNode right, CanonicalJoinNode.EquiJoinClause... criteria)
+    public JoinNode join(ConnectorJoinNode.Type joinType, PlanNode left, PlanNode right, ConnectorJoinNode.EquiJoinClause... criteria)
     {
         return join(joinType, left, right, Optional.empty(), criteria);
     }
 
-    public JoinNode join(CanonicalJoinNode.Type joinType, PlanNode left, PlanNode right, RowExpression filter, CanonicalJoinNode.EquiJoinClause... criteria)
+    public JoinNode join(ConnectorJoinNode.Type joinType, PlanNode left, PlanNode right, RowExpression filter, ConnectorJoinNode.EquiJoinClause... criteria)
     {
         return join(joinType, left, right, Optional.of(filter), criteria);
     }
 
-    private JoinNode join(CanonicalJoinNode.Type joinType, PlanNode left, PlanNode right, Optional<RowExpression> filter, CanonicalJoinNode.EquiJoinClause... criteria)
+    private JoinNode join(ConnectorJoinNode.Type joinType, PlanNode left, PlanNode right, Optional<RowExpression> filter, ConnectorJoinNode.EquiJoinClause... criteria)
     {
         return join(
                 joinType,
@@ -785,16 +785,16 @@ public class PlanBuilder
                 Optional.empty());
     }
 
-    public JoinNode join(CanonicalJoinNode.Type type, PlanNode left, PlanNode right, List<CanonicalJoinNode.EquiJoinClause> criteria, List<VariableReferenceExpression> outputVariables, Optional<RowExpression> filter)
+    public JoinNode join(ConnectorJoinNode.Type type, PlanNode left, PlanNode right, List<ConnectorJoinNode.EquiJoinClause> criteria, List<VariableReferenceExpression> outputVariables, Optional<RowExpression> filter)
     {
         return join(type, left, right, criteria, outputVariables, filter, Optional.empty(), Optional.empty());
     }
 
     public JoinNode join(
-            CanonicalJoinNode.Type type,
+            ConnectorJoinNode.Type type,
             PlanNode left,
             PlanNode right,
-            List<CanonicalJoinNode.EquiJoinClause> criteria,
+            List<ConnectorJoinNode.EquiJoinClause> criteria,
             List<VariableReferenceExpression> outputVariables,
             Optional<RowExpression> filter,
             Optional<VariableReferenceExpression> leftHashVariable,
@@ -804,10 +804,10 @@ public class PlanBuilder
     }
 
     public JoinNode join(
-            CanonicalJoinNode.Type type,
+            ConnectorJoinNode.Type type,
             PlanNode left,
             PlanNode right,
-            List<CanonicalJoinNode.EquiJoinClause> criteria,
+            List<ConnectorJoinNode.EquiJoinClause> criteria,
             List<VariableReferenceExpression> outputVariables,
             Optional<RowExpression> filter,
             Optional<VariableReferenceExpression> leftHashVariable,
@@ -818,10 +818,10 @@ public class PlanBuilder
     }
 
     public JoinNode join(
-            CanonicalJoinNode.Type type,
+            ConnectorJoinNode.Type type,
             PlanNode left,
             PlanNode right,
-            List<CanonicalJoinNode.EquiJoinClause> criteria,
+            List<ConnectorJoinNode.EquiJoinClause> criteria,
             List<VariableReferenceExpression> outputVariables,
             Optional<RowExpression> filter,
             Optional<VariableReferenceExpression> leftHashVariable,

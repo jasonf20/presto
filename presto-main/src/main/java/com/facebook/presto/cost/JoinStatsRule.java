@@ -15,8 +15,8 @@ package com.facebook.presto.cost;
 
 import com.facebook.presto.Session;
 import com.facebook.presto.matching.Pattern;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
-import com.facebook.presto.spi.plan.CanonicalJoinNode.EquiJoinClause;
+import com.facebook.presto.spi.plan.ConnectorJoinNode.EquiJoinClause;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.planner.TypeProvider;
@@ -418,7 +418,7 @@ public class JoinStatsRule
     private List<EquiJoinClause> flippedCriteria(JoinNode node)
     {
         return node.getCriteria().stream()
-                .map(CanonicalJoinNode.EquiJoinClause::flip)
+                .map(ConnectorJoinNode.EquiJoinClause::flip)
                 .collect(toImmutableList());
     }
 }

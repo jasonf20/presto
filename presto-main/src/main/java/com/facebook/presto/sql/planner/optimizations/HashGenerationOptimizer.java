@@ -20,7 +20,7 @@ import com.facebook.presto.spi.VariableAllocator;
 import com.facebook.presto.spi.WarningCollector;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.Assignments;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.DistinctLimitNode;
 import com.facebook.presto.spi.plan.MarkDistinctNode;
 import com.facebook.presto.spi.plan.PlanNode;
@@ -70,9 +70,9 @@ import java.util.function.Function;
 
 import static com.facebook.presto.SystemSessionProperties.skipHashGenerationForJoinWithTableScanInput;
 import static com.facebook.presto.common.type.BigintType.BIGINT;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.INNER;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.LEFT;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.RIGHT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.LEFT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.RIGHT;
 import static com.facebook.presto.spi.plan.ProjectNode.Locality.LOCAL;
 import static com.facebook.presto.spi.plan.ProjectNode.Locality.REMOTE;
 import static com.facebook.presto.sql.planner.PlannerUtils.HASH_CODE;
@@ -344,7 +344,7 @@ public class HashGenerationOptimizer
         @Override
         public PlanWithProperties visitJoin(JoinNode node, HashComputationSet parentPreference)
         {
-            List<CanonicalJoinNode.EquiJoinClause> clauses = node.getCriteria();
+            List<ConnectorJoinNode.EquiJoinClause> clauses = node.getCriteria();
             if (clauses.isEmpty()) {
                 // join does not pass through preferred hash variables since they take more memory and since
                 // the join node filters, may take more compute
@@ -358,14 +358,14 @@ public class HashGenerationOptimizer
 
             // join does not pass through preferred hash variables since they take more memory and since
             // the join node filters, may take more compute
-            Optional<HashComputation> leftHashComputation = computeHash(Lists.transform(clauses, CanonicalJoinNode.EquiJoinClause::getLeft), functionAndTypeManager);
+            Optional<HashComputation> leftHashComputation = computeHash(Lists.transform(clauses, ConnectorJoinNode.EquiJoinClause::getLeft), functionAndTypeManager);
             if (skipHashGenerationForJoinWithTableScanInput(session) && skipHashComputeForJoinInput(node.getLeft(), leftHashComputation, parentPreference)) {
                 leftHashComputation = Optional.empty();
             }
             PlanWithProperties left = planAndEnforce(node.getLeft(), new HashComputationSet(leftHashComputation), true, new HashComputationSet(leftHashComputation));
             Optional<VariableReferenceExpression> leftHashVariable = leftHashComputation.isPresent() ? Optional.of(left.getRequiredHashVariable(leftHashComputation.get())) : Optional.empty();
 
-            Optional<HashComputation> rightHashComputation = computeHash(Lists.transform(clauses, CanonicalJoinNode.EquiJoinClause::getRight), functionAndTypeManager);
+            Optional<HashComputation> rightHashComputation = computeHash(Lists.transform(clauses, ConnectorJoinNode.EquiJoinClause::getRight), functionAndTypeManager);
             if (skipHashGenerationForJoinWithTableScanInput(session) && skipHashComputeForJoinInput(node.getRight(), rightHashComputation, parentPreference)) {
                 rightHashComputation = Optional.empty();
             }

@@ -15,7 +15,7 @@ package com.facebook.presto.sql.planner.plan;
 
 import com.facebook.presto.metadata.FunctionAndTypeManager;
 import com.facebook.presto.spi.SourceLocation;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.LogicalProperties;
 import com.facebook.presto.spi.plan.LogicalPropertiesProvider;
 import com.facebook.presto.spi.plan.PlanNode;
@@ -40,10 +40,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.FULL;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.INNER;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.LEFT;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.RIGHT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.FULL;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.LEFT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.SortExpressionExtractor.extractSortExpression;
 import static com.facebook.presto.sql.planner.plan.JoinNode.DistributionType.PARTITIONED;
 import static com.facebook.presto.sql.planner.plan.JoinNode.DistributionType.REPLICATED;
@@ -57,10 +57,10 @@ import static java.util.Objects.requireNonNull;
 public class JoinNode
         extends AbstractJoinNode
 {
-    private final CanonicalJoinNode.Type type;
+    private final ConnectorJoinNode.Type type;
     private final PlanNode left;
     private final PlanNode right;
-    private final List<CanonicalJoinNode.EquiJoinClause> criteria;
+    private final List<ConnectorJoinNode.EquiJoinClause> criteria;
     private final List<VariableReferenceExpression> outputVariables;
     private final Optional<RowExpression> filter;
     private final Optional<VariableReferenceExpression> leftHashVariable;
@@ -72,10 +72,10 @@ public class JoinNode
     public JoinNode(
             Optional<SourceLocation> sourceLocation,
             @JsonProperty("id") PlanNodeId id,
-            @JsonProperty("type") CanonicalJoinNode.Type type,
+            @JsonProperty("type") ConnectorJoinNode.Type type,
             @JsonProperty("left") PlanNode left,
             @JsonProperty("right") PlanNode right,
-            @JsonProperty("criteria") List<CanonicalJoinNode.EquiJoinClause> criteria,
+            @JsonProperty("criteria") List<ConnectorJoinNode.EquiJoinClause> criteria,
             @JsonProperty("outputVariables") List<VariableReferenceExpression> outputVariables,
             @JsonProperty("filter") Optional<RowExpression> filter,
             @JsonProperty("leftHashVariable") Optional<VariableReferenceExpression> leftHashVariable,
@@ -90,10 +90,10 @@ public class JoinNode
             Optional<SourceLocation> sourceLocation,
             PlanNodeId id,
             Optional<PlanNode> statsEquivalentPlanNode,
-            CanonicalJoinNode.Type type,
+            ConnectorJoinNode.Type type,
             PlanNode left,
             PlanNode right,
-            List<CanonicalJoinNode.EquiJoinClause> criteria,
+            List<ConnectorJoinNode.EquiJoinClause> criteria,
             List<VariableReferenceExpression> outputVariables,
             Optional<RowExpression> filter,
             Optional<VariableReferenceExpression> leftHashVariable,
@@ -179,7 +179,7 @@ public class JoinNode
     }
 
     @VisibleForTesting
-    public static CanonicalJoinNode.Type flipType(CanonicalJoinNode.Type type)
+    public static ConnectorJoinNode.Type flipType(ConnectorJoinNode.Type type)
     {
         switch (type) {
             case INNER:
@@ -195,10 +195,10 @@ public class JoinNode
         }
     }
 
-    private static List<CanonicalJoinNode.EquiJoinClause> flipJoinCriteria(List<CanonicalJoinNode.EquiJoinClause> joinCriteria)
+    private static List<ConnectorJoinNode.EquiJoinClause> flipJoinCriteria(List<ConnectorJoinNode.EquiJoinClause> joinCriteria)
     {
         return joinCriteria.stream()
-                .map(CanonicalJoinNode.EquiJoinClause::flip)
+                .map(ConnectorJoinNode.EquiJoinClause::flip)
                 .collect(toImmutableList());
     }
 
@@ -223,7 +223,7 @@ public class JoinNode
     }
 
     @JsonProperty
-    public CanonicalJoinNode.Type getType()
+    public ConnectorJoinNode.Type getType()
     {
         return type;
     }
@@ -253,7 +253,7 @@ public class JoinNode
     }
 
     @JsonProperty
-    public List<CanonicalJoinNode.EquiJoinClause> getCriteria()
+    public List<ConnectorJoinNode.EquiJoinClause> getCriteria()
     {
         return criteria;
     }

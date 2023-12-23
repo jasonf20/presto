@@ -15,7 +15,7 @@ package com.facebook.presto.sql.planner.iterative.rule;
 
 import com.facebook.presto.cost.PlanNodeStatsEstimate;
 import com.facebook.presto.cost.VariableStatsEstimate;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
@@ -37,7 +37,7 @@ import static com.facebook.presto.SystemSessionProperties.IN_PREDICATES_AS_INNER
 import static com.facebook.presto.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
 import static com.facebook.presto.common.type.BigintType.BIGINT;
 import static com.facebook.presto.spi.plan.AggregationNode.Step.SINGLE;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.INNER;
 import static com.facebook.presto.sql.analyzer.FeaturesConfig.JoinReorderingStrategy.AUTOMATIC;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.aggregation;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.assignUniqueId;
@@ -77,7 +77,7 @@ public class TestTransformDistinctInnerJoinToLeftEarlyOutJoin
                                     p.assignUniqueId(unique,
                                             p.values(new PlanNodeId("valuesA"), 1000, a)),
                                     p.values(new PlanNodeId("valuesB"), 100, b),
-                                    ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(a, b)),
+                                    ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(a, b)),
                                     ImmutableList.of(unique, a),
                                     Optional.empty())));
                 })
@@ -118,7 +118,7 @@ public class TestTransformDistinctInnerJoinToLeftEarlyOutJoin
                                     p.assignUniqueId(unique,
                                             p.values(new PlanNodeId("valuesA"), 1000, a)),
                                     p.values(new PlanNodeId("valuesBC"), 100, b, c),
-                                    ImmutableList.of(new CanonicalJoinNode.EquiJoinClause(a, b)),
+                                    ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(a, b)),
                                     ImmutableList.of(unique, a, c),
                                     Optional.empty())));
                 })
@@ -153,7 +153,7 @@ public class TestTransformDistinctInnerJoinToLeftEarlyOutJoin
                                     p.values(new PlanNodeId("valuesB"), b),
                                     p.assignUniqueId(unique,
                                             p.values(new PlanNodeId("valuesA"), a)),
-                                    new CanonicalJoinNode.EquiJoinClause(b, a)))));
+                                    new ConnectorJoinNode.EquiJoinClause(b, a)))));
         };
 
         tester().assertThat(new TransformDistinctInnerJoinToLeftEarlyOutJoin())

@@ -26,8 +26,8 @@ import com.google.common.collect.Range;
 
 import static com.facebook.presto.SystemSessionProperties.isPushLimitThroughOuterJoin;
 import static com.facebook.presto.matching.Capture.newCapture;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.LEFT;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.RIGHT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.LEFT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.RIGHT;
 import static com.facebook.presto.spi.plan.LimitNode.Step.PARTIAL;
 import static com.facebook.presto.sql.planner.optimizations.QueryCardinalityUtil.extractCardinality;
 import static com.facebook.presto.sql.planner.plan.Patterns.Join.type;

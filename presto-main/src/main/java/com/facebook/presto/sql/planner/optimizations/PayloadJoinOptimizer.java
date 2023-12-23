@@ -23,7 +23,7 @@ import com.facebook.presto.spi.VariableAllocator;
 import com.facebook.presto.spi.WarningCollector;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.Assignments;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.FilterNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeIdAllocator;
@@ -57,7 +57,7 @@ import static com.facebook.presto.common.type.BooleanType.BOOLEAN;
 import static com.facebook.presto.common.type.TypeUtils.isNumericType;
 import static com.facebook.presto.spi.plan.AggregationNode.Step.SINGLE;
 import static com.facebook.presto.spi.plan.AggregationNode.singleGroupingSet;
-import static com.facebook.presto.spi.plan.CanonicalJoinNode.Type.LEFT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.LEFT;
 import static com.facebook.presto.spi.relation.SpecialFormExpression.Form.IS_NULL;
 import static com.facebook.presto.sql.planner.PlannerUtils.addProjections;
 import static com.facebook.presto.sql.planner.PlannerUtils.clonePlanNode;
@@ -268,7 +268,7 @@ public class PayloadJoinOptimizer
             return newChild;
         }
 
-        private boolean needsRewrite(CanonicalJoinNode.Type joinType, ImmutableSet<VariableReferenceExpression> leftColumns, Set<VariableReferenceExpression> joinKeys)
+        private boolean needsRewrite(ConnectorJoinNode.Type joinType, ImmutableSet<VariableReferenceExpression> leftColumns, Set<VariableReferenceExpression> joinKeys)
         {
             return joinType == LEFT && supportedJoinKeyTypes(joinKeys) && leftColumns.stream().anyMatch(var -> !joinKeys.contains(var));
         }
@@ -444,7 +444,7 @@ public class PayloadJoinOptimizer
             return new JoinNode(
                     keysNode.getSourceLocation(),
                     planNodeIdAllocator.getNextId(),
-                    CanonicalJoinNode.Type.LEFT,
+                    ConnectorJoinNode.Type.LEFT,
                     payloadPlanNode,
                     projectNode,
                     ImmutableList.of(),
@@ -489,7 +489,7 @@ public class PayloadJoinOptimizer
             return coalesce(ImmutableList.of(var, zero));
         }
 
-        private Set<VariableReferenceExpression> extractJoinKeys(Optional<RowExpression> filter, List<CanonicalJoinNode.EquiJoinClause> criteria)
+        private Set<VariableReferenceExpression> extractJoinKeys(Optional<RowExpression> filter, List<ConnectorJoinNode.EquiJoinClause> criteria)
         {
             ImmutableSet.Builder<VariableReferenceExpression> builder = ImmutableSet.builder();
 

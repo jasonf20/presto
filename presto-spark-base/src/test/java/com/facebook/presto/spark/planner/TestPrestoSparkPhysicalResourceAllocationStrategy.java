@@ -22,7 +22,7 @@ import com.facebook.presto.spark.PrestoSparkSourceStatsCollector;
 import com.facebook.presto.spi.ColumnHandle;
 import com.facebook.presto.spi.Constraint;
 import com.facebook.presto.spi.TableHandle;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeIdAllocator;
 import com.facebook.presto.spi.plan.TableScanNode;
@@ -112,7 +112,7 @@ public class TestPrestoSparkPhysicalResourceAllocationStrategy
         VariableReferenceExpression filteringSource = planBuilder.variable("filteringSource");
         TableScanNode b = planBuilder.tableScan(ImmutableList.of(filteringSource), ImmutableMap.of(filteringSource, new TestingMetadata.TestingColumnHandle("filteringSource")));
 
-        return planBuilder.join(CanonicalJoinNode.Type.LEFT, a, b);
+        return planBuilder.join(ConnectorJoinNode.Type.LEFT, a, b);
     }
 
     private PhysicalResourceSettings getSettingsHolder(Session session, Metadata metadata)

@@ -16,7 +16,7 @@ package com.facebook.presto.sql.planner.assertions;
 import com.facebook.presto.Session;
 import com.facebook.presto.cost.StatsProvider;
 import com.facebook.presto.metadata.Metadata;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.relation.RowExpression;
 import com.facebook.presto.sql.planner.plan.JoinNode;
@@ -37,15 +37,15 @@ import static java.util.Objects.requireNonNull;
 final class JoinMatcher
         implements Matcher
 {
-    private final CanonicalJoinNode.Type joinType;
-    private final List<ExpectedValueProvider<CanonicalJoinNode.EquiJoinClause>> equiCriteria;
+    private final ConnectorJoinNode.Type joinType;
+    private final List<ExpectedValueProvider<ConnectorJoinNode.EquiJoinClause>> equiCriteria;
     private final Optional<Expression> filter;
     private final Optional<DistributionType> distributionType;
     private final Optional<DynamicFilterMatcher> dynamicFilter;
 
     JoinMatcher(
-            CanonicalJoinNode.Type joinType,
-            List<ExpectedValueProvider<CanonicalJoinNode.EquiJoinClause>> equiCriteria,
+            ConnectorJoinNode.Type joinType,
+            List<ExpectedValueProvider<ConnectorJoinNode.EquiJoinClause>> equiCriteria,
             Optional<Expression> filter,
             Optional<DistributionType> distributionType,
             Optional<DynamicFilterMatcher> dynamicFilter)

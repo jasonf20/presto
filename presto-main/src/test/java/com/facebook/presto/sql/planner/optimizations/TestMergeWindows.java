@@ -14,7 +14,7 @@
 package com.facebook.presto.sql.planner.optimizations;
 
 import com.facebook.presto.common.block.SortOrder;
-import com.facebook.presto.spi.plan.CanonicalJoinNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.sql.planner.RuleStatsRecorder;
 import com.facebook.presto.sql.planner.assertions.BasePlanTest;
 import com.facebook.presto.sql.planner.assertions.ExpectedValueProvider;
@@ -466,7 +466,7 @@ public class TestMergeWindows
         assertUnitPlan(sql,
                 anyTree(
                         filter("SUM = AVG",
-                                join(CanonicalJoinNode.Type.INNER, ImmutableList.of(),
+                                join(ConnectorJoinNode.Type.INNER, ImmutableList.of(),
                                         any(
                                                 window(windowMatcherBuilder -> windowMatcherBuilder
                                                                 .specification(leftSpecification)
