@@ -756,7 +756,7 @@ public class IcebergPageSourceProvider
             List<DeleteFile> deletesToApply = split
                     .getDeletes()
                     .stream()
-                    .filter(deleteFile -> deleteFile.content() == POSITION_DELETES || table.isApplyEqualityDeletesDuringScan())
+                    .filter(deleteFile -> deleteFile.content() == POSITION_DELETES || table.getTableName().getTableType() == TableType.DATA)
                     .collect(Collectors.toList());
             List<DeleteFilter> deleteFilters = readDeletes(
                     session,

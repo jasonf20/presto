@@ -146,8 +146,7 @@ public class IcebergEqualityDeleteAsJoin
             TableHandle table = node.getTable();
             IcebergTableHandle icebergTableHandle = (IcebergTableHandle) table.getConnectorHandle();
             if (!icebergTableHandle.getTableName().getSnapshotId().isPresent() ||
-                    icebergTableHandle.getTableName().getTableType() != TableType.DATA ||
-                    !icebergTableHandle.isApplyEqualityDeletesDuringScan()) {
+                    icebergTableHandle.getTableName().getTableType() != TableType.DATA) {
                 return node;
             }
             IcebergAbstractMetadata metadata = (IcebergAbstractMetadata) transactionManager.get(table.getTransaction());
@@ -200,12 +199,14 @@ public class IcebergEqualityDeleteAsJoin
                     });
             ImmutableMap<VariableReferenceExpression, ColumnHandle> unselectedAssignments = unselectedAssignmentsBuilder.build();
 
+            IcebergTableName oldTableName = icebergTableHandle.getTableName();
+            IcebergTableName updatedTableName =
+                    new IcebergTableName(oldTableName.getTableName(), TableType.DATE_WITHOUT_EQUALITY_DELETES, oldTableName.getSnapshotId(), oldTableName.getChangelogEndSnapshot());
             IcebergTableHandle updatedHandle = new IcebergTableHandle(icebergTableHandle.getSchemaName(),
-                    icebergTableHandle.getTableName(),
+                    updatedTableName,
                     icebergTableHandle.isSnapshotSpecified(),
                     icebergTableHandle.getPredicate(),
-                    icebergTableHandle.getTableSchemaJson(),
-                    false);
+                    icebergTableHandle.getTableSchemaJson());
             VariableReferenceExpression dataSequenceNumberVariableReference = toVariableReference(IcebergColumnHandle.dataSequenceNumberColumnHandle());
             ImmutableMap<VariableReferenceExpression, ColumnHandle> assignments = ImmutableMap.<VariableReferenceExpression, ColumnHandle>builder()
                     .put(dataSequenceNumberVariableReference, IcebergColumnHandle.dataSequenceNumberColumnHandle())
@@ -263,8 +264,7 @@ public class IcebergEqualityDeleteAsJoin
                         new IcebergTableName(icebergTableName.getTableName(), TableType.EQUALITY_DELETES, icebergTableName.getSnapshotId(), Optional.empty()),
                         icebergTableHandle.isSnapshotSpecified(),
                         icebergTableHandle.getPredicate(),
-                        Optional.of(SchemaParser.toJson(new Schema(deleteFields))),
-                        false);
+                        Optional.of(SchemaParser.toJson(new Schema(deleteFields))));
                 TableScanNode deleteTableScan = new TableScanNode(Optional.empty(),
                         idAllocator.getNextId(),
                         new TableHandle(table.getConnectorId(), deletesTableHanlde, table.getTransaction(), table.getLayout(), table.getDynamicFilter()),

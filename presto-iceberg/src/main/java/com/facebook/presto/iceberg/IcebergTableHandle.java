@@ -32,7 +32,6 @@ public class IcebergTableHandle
     private final TupleDomain<IcebergColumnHandle> predicate;
     private final boolean snapshotSpecified;
     private final Optional<String> tableSchemaJson;
-    private final boolean applyEqualityDeletesDuringScan;
 
     @JsonCreator
     public IcebergTableHandle(
@@ -40,15 +39,13 @@ public class IcebergTableHandle
             @JsonProperty("tableName") IcebergTableName tableName,
             @JsonProperty("snapshotSpecified") boolean snapshotSpecified,
             @JsonProperty("predicate") TupleDomain<IcebergColumnHandle> predicate,
-            @JsonProperty("tableSchemaJson") Optional<String> tableSchemaJson,
-            @JsonProperty("applyEqualityDeletesDuringScan") boolean applyEqualityDeletesDuringScan)
+            @JsonProperty("tableSchemaJson") Optional<String> tableSchemaJson)
     {
         this.schemaName = requireNonNull(schemaName, "schemaName is null");
         this.tableName = requireNonNull(tableName, "tableName is null");
         this.snapshotSpecified = snapshotSpecified;
         this.predicate = requireNonNull(predicate, "predicate is null");
         this.tableSchemaJson = requireNonNull(tableSchemaJson, "tableSchemaJson is null");
-        this.applyEqualityDeletesDuringScan = applyEqualityDeletesDuringScan;
     }
 
     @JsonProperty
@@ -79,13 +76,6 @@ public class IcebergTableHandle
     public Optional<String> getTableSchemaJson()
     {
         return tableSchemaJson;
-    }
-
-    @JsonProperty
-    public boolean isApplyEqualityDeletesDuringScan()
-    {
-        //TODO: Consider removing this and using session param in split provider
-        return applyEqualityDeletesDuringScan;
     }
 
     public SchemaTableName getSchemaTableName()
