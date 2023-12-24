@@ -147,14 +147,15 @@ public class IcebergEqualityDeleteAsJoin
             IcebergAbstractMetadata metadata = (IcebergAbstractMetadata) transactionManager.get(table.getTransaction());
             Table icebergTable = getIcebergTable(metadata, session, icebergTableHandle.getSchemaTableName());
             HashSet<Set<Integer>> deleteSchemas = new HashSet<>();
-            Map<Integer, PartitionField> partitionFields = new HashMap<>();
+            Map<Integer, PartitionFieldInfo> partitionFields = new HashMap<>();
             try (CloseableIterator<DeleteFile> files =
                     IcebergUtil.getDeleteFiles(icebergTable, tableName.getSnapshotId().get(), icebergTableHandle.getPredicate()).iterator()) {
                 while (files.hasNext()) {
                     DeleteFile delete = files.next();
                     if (delete.content() == FileContent.EQUALITY_DELETES) {
                         PartitionSpec partitionSpec = icebergTable.specs().get(delete.specId());
-                        partitionSpec.fields().forEach(f -> partitionFields.put(f.fieldId(), f));
+                        Types.StructType partitionType = partitionSpec.partitionType();
+                        partitionSpec.fields().forEach(f -> partitionFields.put(f.fieldId(), new PartitionFieldInfo(partitionType.field(f.fieldId()), f)));
                         List<Integer> partitionFieldIds = partitionSpec.fields().stream().map(PartitionField::fieldId).collect(Collectors.toList());
                         HashSet<Integer> result = new HashSet<>();
                         result.addAll(delete.equalityFieldIds());
@@ -275,7 +276,7 @@ public class IcebergEqualityDeleteAsJoin
 
         private ImmutableMap<VariableReferenceExpression, ColumnHandle> createAssignmentsForUnselectedFields(TableScanNode node,
                 HashSet<Set<Integer>> deleteSchemas,
-                Map<Integer, PartitionField> partitionFields,
+                Map<Integer, PartitionFieldInfo> partitionFields,
                 Table icebergTable)
         {
             Set<Integer> selectedFields = node.getAssignments().values().stream().map(f -> ((IcebergColumnHandle) f).getId()).collect(Collectors.toSet());
@@ -284,13 +285,12 @@ public class IcebergEqualityDeleteAsJoin
             unselectedFields
                     .forEach(fieldId -> {
                         if (partitionFields.containsKey(fieldId)) {
-                            PartitionField partitionField = partitionFields.get(fieldId);
-                            Types.NestedField sourceField = icebergTable.schema().findField(partitionField.sourceId());
-                            Types.NestedField fieldToSelect = icebergTable.spec().partitionType().field(partitionField.fieldId()); //TODO: Use right spec id
-                            Type partitionFieldType = TypeConverter.toPrestoType(partitionField.transform().getResultType(sourceField.type()), typeManager);
+                            PartitionFieldInfo partitionFieldInfo = partitionFields.get(fieldId);
+                            Types.NestedField sourceField = icebergTable.schema().findField(partitionFieldInfo.getPartitionField().sourceId());
+                            Type partitionFieldType = TypeConverter.toPrestoType(partitionFieldInfo.getPartitionField().transform().getResultType(sourceField.type()), typeManager);
                             unselectedAssignmentsBuilder.put(
-                                    variableAllocator.newVariable(partitionField.name(), partitionFieldType),
-                                    IcebergColumnHandle.create(fieldToSelect, typeManager, PARTITION_KEY));
+                                    variableAllocator.newVariable(partitionFieldInfo.getPartitionField().name(), partitionFieldType),
+                                    IcebergColumnHandle.create(partitionFieldInfo.getNestedField(), typeManager, PARTITION_KEY));
                         }
                         else {
                             Types.NestedField schemaField = icebergTable.schema().findField(fieldId);
@@ -320,6 +320,28 @@ public class IcebergEqualityDeleteAsJoin
         private static ColumnIdentity toColumnIdentity(Types.NestedField nestedField)
         {
             return new ColumnIdentity(nestedField.fieldId(), nestedField.name(), ColumnIdentity.TypeCategory.PRIMITIVE, Collections.emptyList());
+        }
+
+        private static class PartitionFieldInfo
+        {
+            private final Types.NestedField nestedField;
+            private final PartitionField partitionField;
+
+            private PartitionFieldInfo(Types.NestedField nestedField, PartitionField partitionField)
+            {
+                this.nestedField = nestedField;
+                this.partitionField = partitionField;
+            }
+
+            public PartitionField getPartitionField()
+            {
+                return partitionField;
+            }
+
+            public Types.NestedField getNestedField()
+            {
+                return nestedField;
+            }
         }
     }
 }
