@@ -925,13 +925,13 @@ public class IcebergDistributedTestBase
         Table icebergTable = updateTable(tableName);
 
         writeEqualityDeleteToNationTable(icebergTable, ImmutableMap.of("regionkey", 1L));
-        writeEqualityDeleteToNationTable(icebergTable, ImmutableMap.of("name", "IRAN"));
-        writeEqualityDeleteToNationTable(icebergTable, ImmutableMap.of("regionkey", 2L, "name", "INDONESIA"));
+        writeEqualityDeleteToNationTable(icebergTable, ImmutableMap.of("nationkey", 10L));
+        writeEqualityDeleteToNationTable(icebergTable, ImmutableMap.of("regionkey", 2L, "nationkey", 9L));
         testCheckDeleteFiles(icebergTable, 3, Stream.generate(() -> EQUALITY_DELETES).limit(3).collect(Collectors.toList()));
-        assertQuery(session, "SELECT \"$data_sequence_number\", regionkey, name FROM \"" + tableName + "$equality_deletes\"", "VALUES (2, 1, null), (3, null, 'IRAN'), (4, 2, 'INDONESIA')");
-        assertQuery(session, "SELECT * FROM " + tableName, "SELECT * FROM nation WHERE NOT(regionkey = 2 AND name = 'INDONESIA') AND name <> 'IRAN' AND regionkey <> 1");
-        assertQuery(session, "SELECT nationkey FROM " + tableName, "SELECT nationkey FROM nation WHERE NOT(regionkey = 2 AND name = 'INDONESIA') AND name <> 'IRAN' AND regionkey <> 1");
-        assertQuery(session, "SELECT name FROM " + tableName, "SELECT name FROM nation WHERE NOT(regionkey = 2 AND name = 'INDONESIA') AND name <> 'IRAN' AND regionkey <> 1");
+        assertQuery(session, "SELECT \"$data_sequence_number\", regionkey, nationkey FROM \"" + tableName + "$equality_deletes\"", "VALUES (2, 1, null), (3, null, 10), (4, 2, 9)");
+        assertQuery(session, "SELECT * FROM " + tableName, "SELECT * FROM nation WHERE NOT(regionkey = 2 AND nationkey = 9) AND nationkey <> 10 AND regionkey <> 1");
+        assertQuery(session, "SELECT regionkey FROM " + tableName, "SELECT regionkey FROM nation WHERE NOT(regionkey = 2 AND nationkey = 9) AND nationkey <> 10 AND regionkey <> 1");
+        assertQuery(session, "SELECT nationkey FROM " + tableName, "SELECT nationkey FROM nation WHERE NOT(regionkey = 2 AND nationkey = 9) AND nationkey <> 10 AND regionkey <> 1");
     }
 
 
