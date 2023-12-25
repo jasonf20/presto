@@ -731,7 +731,9 @@ public class IcebergPageSourceProvider
         Optional<String> tableSchemaJson = table.getTableSchemaJson();
         verify(tableSchemaJson.isPresent(), "tableSchemaJson is null");
         Schema tableSchema = SchemaParser.fromJson(tableSchemaJson.get());
-        Set<IcebergColumnHandle> deleteFilterRequiredColumns = requiredColumnsForDeletes(tableSchema, split.getDeletes());
+
+        boolean equalityDeletesRequired = table.getTableName().getTableType() == TableType.DATA;
+        Set<IcebergColumnHandle> deleteFilterRequiredColumns = requiredColumnsForDeletes(tableSchema, split.getDeletes(), equalityDeletesRequired);
 
         deleteFilterRequiredColumns.stream()
                 .filter(not(icebergColumns::contains))
@@ -752,11 +754,17 @@ public class IcebergPageSourceProvider
         ConnectorPageSource dataPageSource = connectorPageSourceWithRowPositions.getConnectorPageSource();
 
         Supplier<Optional<RowPredicate>> deletePredicate = Suppliers.memoize(() -> {
+            // If equality deletes are optimized into a join they don't need to be applied here
+            List<DeleteFile> deletesToApply = split
+                    .getDeletes()
+                    .stream()
+                    .filter(deleteFile -> deleteFile.content() == POSITION_DELETES || equalityDeletesRequired)
+                    .collect(Collectors.toList());
             List<DeleteFilter> deleteFilters = readDeletes(
                     session,
                     tableSchema,
                     split.getPath(),
-                    split.getDeletes(),
+                    deletesToApply,
                     connectorPageSourceWithRowPositions.getStartRowPosition(),
                     connectorPageSourceWithRowPositions.getEndRowPosition());
             return deleteFilters.stream()
@@ -781,14 +789,14 @@ public class IcebergPageSourceProvider
         return dataSource;
     }
 
-    private Set<IcebergColumnHandle> requiredColumnsForDeletes(Schema schema, List<DeleteFile> deletes)
+    private Set<IcebergColumnHandle> requiredColumnsForDeletes(Schema schema, List<DeleteFile> deletes, boolean equalityDeletesRequired)
     {
         ImmutableSet.Builder<IcebergColumnHandle> requiredColumns = ImmutableSet.builder();
         for (DeleteFile deleteFile : deletes) {
             if (deleteFile.content() == POSITION_DELETES) {
                 requiredColumns.add(IcebergColumnHandle.create(ROW_POSITION, typeManager, IcebergColumnHandle.ColumnType.REGULAR));
             }
-            else if (deleteFile.content() == EQUALITY_DELETES) {
+            else if (deleteFile.content() == EQUALITY_DELETES && equalityDeletesRequired) {
                 deleteFile.equalityFieldIds().stream()
                         .map(id -> IcebergColumnHandle.create(schema.findField(id), typeManager, IcebergColumnHandle.ColumnType.REGULAR))
                         .forEach(requiredColumns::add);

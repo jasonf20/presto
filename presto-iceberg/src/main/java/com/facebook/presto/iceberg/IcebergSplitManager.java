@@ -16,6 +16,7 @@ package com.facebook.presto.iceberg;
 import com.facebook.presto.common.predicate.TupleDomain;
 import com.facebook.presto.common.type.TypeManager;
 import com.facebook.presto.iceberg.changelog.ChangelogSplitSource;
+import com.facebook.presto.iceberg.equalitydeletes.EqualityDeletesSplitSource;
 import com.facebook.presto.spi.ConnectorSession;
 import com.facebook.presto.spi.ConnectorSplitSource;
 import com.facebook.presto.spi.ConnectorTableLayoutHandle;
@@ -23,9 +24,11 @@ import com.facebook.presto.spi.FixedSplitSource;
 import com.facebook.presto.spi.connector.ConnectorSplitManager;
 import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
 import com.google.common.collect.ImmutableList;
+import org.apache.iceberg.DeleteFile;
 import org.apache.iceberg.IncrementalChangelogScan;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
+import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.util.SnapshotUtil;
 import org.apache.iceberg.util.TableScanUtil;
 
@@ -36,6 +39,7 @@ import static com.facebook.presto.iceberg.IcebergSessionProperties.getMinimumAss
 import static com.facebook.presto.iceberg.IcebergSessionProperties.isPushdownFilterEnabled;
 import static com.facebook.presto.iceberg.IcebergUtil.getIcebergTable;
 import static com.facebook.presto.iceberg.TableType.CHANGELOG;
+import static com.facebook.presto.iceberg.TableType.EQUALITY_DELETES;
 import static java.util.Objects.requireNonNull;
 
 public class IcebergSplitManager
@@ -80,6 +84,14 @@ public class IcebergSplitManager
                     .fromSnapshotExclusive(fromSnapshot)
                     .toSnapshot(toSnapshot);
             return new ChangelogSplitSource(session, typeManager, icebergTable, scan, scan.targetSplitSize());
+        }
+        else if (table.getTableName().getTableType() == EQUALITY_DELETES) {
+            CloseableIterable<DeleteFile> deleteFiles = IcebergUtil.getDeleteFiles(icebergTable,
+                    table.getTableName().getSnapshotId().get(),
+                    table.getPredicate(),
+                    table.getEqualityFieldIds());
+
+            return new EqualityDeletesSplitSource(session, icebergTable, deleteFiles);
         }
         else {
             TableScan tableScan = icebergTable.newScan()

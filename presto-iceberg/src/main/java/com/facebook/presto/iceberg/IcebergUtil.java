@@ -13,6 +13,7 @@
  */
 package com.facebook.presto.iceberg;
 
+import avro.shaded.com.google.common.collect.Iterators;
 import com.facebook.airlift.log.Logger;
 import com.facebook.presto.common.predicate.Domain;
 import com.facebook.presto.common.predicate.NullableValue;
@@ -43,9 +44,13 @@ import com.facebook.presto.spi.connector.ConnectorMetadata;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.iceberg.BaseTable;
+import org.apache.iceberg.ContentFile;
 import org.apache.iceberg.ContentScanTask;
 import org.apache.iceberg.DataFile;
+import org.apache.iceberg.DeleteFile;
+import org.apache.iceberg.FileContent;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.FileScanTask;
 import org.apache.iceberg.HistoryEntry;
@@ -62,6 +67,7 @@ import org.apache.iceberg.TableScan;
 import org.apache.iceberg.expressions.Expression;
 import org.apache.iceberg.hive.HiveSchemaUtil;
 import org.apache.iceberg.io.CloseableIterable;
+import org.apache.iceberg.io.CloseableIterator;
 import org.apache.iceberg.io.LocationProvider;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.types.Types.NestedField;
@@ -78,6 +84,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -703,18 +710,24 @@ public final class IcebergUtil
     {
         StructLike partition = scanTask.file().partition();
         PartitionSpec spec = scanTask.spec();
-        Map<PartitionField, Integer> fieldToIndex = getIdentityPartitions(spec);
+        return getPartitionKeys(spec, partition);
+    }
+
+    public static Map<Integer, HivePartitionKey> getPartitionKeys(PartitionSpec spec, StructLike partition)
+    {
         Map<Integer, HivePartitionKey> partitionKeys = new HashMap<>();
 
-        fieldToIndex.forEach((field, index) -> {
-            int id = field.sourceId();
+        int index = 0;
+        for (PartitionField field : spec.fields()) {
+            int sourceId = field.sourceId();
             String colName = field.name();
-            org.apache.iceberg.types.Type type = spec.schema().findType(id);
+            org.apache.iceberg.types.Type sourceType = spec.schema().findType(sourceId);
+            org.apache.iceberg.types.Type type = field.transform().getResultType(sourceType);
             Class<?> javaClass = type.typeId().javaClass();
             Object value = partition.get(index, javaClass);
 
             if (value == null) {
-                partitionKeys.put(id, new HivePartitionKey(colName, Optional.empty()));
+                partitionKeys.put(field.fieldId(), new HivePartitionKey(colName, Optional.empty()));
             }
             else {
                 HivePartitionKey partitionValue;
@@ -725,9 +738,13 @@ public final class IcebergUtil
                 else {
                     partitionValue = new HivePartitionKey(colName, Optional.of(value.toString()));
                 }
-                partitionKeys.put(id, partitionValue);
+                partitionKeys.put(field.fieldId(), partitionValue);
+                if (field.transform().isIdentity()) {
+                    partitionKeys.put(sourceId, partitionValue);
+                }
             }
-        });
+            index += 1;
+        }
 
         return Collections.unmodifiableMap(partitionKeys);
     }
@@ -738,5 +755,88 @@ public final class IcebergUtil
         properties.put(IO_MANIFEST_CACHE_MAX_TOTAL_BYTES, String.valueOf(icebergConfig.getMaxManifestCacheSize()));
         properties.put(IO_MANIFEST_CACHE_MAX_CONTENT_LENGTH, String.valueOf(icebergConfig.getManifestCacheMaxContentLength()));
         properties.put(IO_MANIFEST_CACHE_EXPIRATION_INTERVAL_MS, String.valueOf(icebergConfig.getManifestCacheExpireDuration()));
+    }
+
+    public static CloseableIterable<DeleteFile> getDeleteFiles(Table table,
+            long snapshot,
+            TupleDomain<IcebergColumnHandle> filter,
+            Optional<Set<Integer>> requestedSchema)
+    {
+        Expression filterExpression = toIcebergExpression(filter);
+        CloseableIterator<FileScanTask> fileTasks = table.newScan().useSnapshot(snapshot).filter(filterExpression).planFiles().iterator();
+
+        return new CloseableIterable<DeleteFile>()
+        {
+            @Override
+            public void close()
+                    throws IOException
+            {
+                fileTasks.close();
+            }
+
+            @Override
+            public CloseableIterator<DeleteFile> iterator()
+            {
+                return new CloseableIterator<DeleteFile>()
+                {
+                    final Set<String> seenFiles = new HashSet<>();
+                    Iterator<DeleteFile> currentDeletes = Iterators.emptyIterator();
+
+                    DeleteFile currentFile;
+
+                    @Override
+                    public boolean hasNext()
+                    {
+                        return currentFile != null || advance();
+                    }
+
+                    private boolean advance()
+                    {
+                        currentFile = null;
+                        while (currentFile == null && (currentDeletes.hasNext() || fileTasks.hasNext())) {
+                            if (!currentDeletes.hasNext()) {
+                                currentDeletes = fileTasks.next().deletes().iterator();
+                            }
+                            while (currentDeletes.hasNext()) {
+                                DeleteFile item = currentDeletes.next();
+                                if (item.content() == FileContent.POSITION_DELETES ||
+                                        !requestedSchema.isPresent() ||
+                                        requestedSchema.get().equals(ImmutableSet.copyOf(item.equalityFieldIds()))) {
+                                    // If there is a requested schema only include files that match it
+                                    if (seenFiles.add(item.path().toString())) {
+                                        currentFile = item;
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                        return false;
+                    }
+
+                    @Override
+                    public DeleteFile next()
+                    {
+                        DeleteFile result = currentFile;
+                        advance();
+                        return result;
+                    }
+
+                    @Override
+                    public void close()
+                            throws IOException
+                    {
+                        fileTasks.close();
+                    }
+                };
+            }
+        };
+    }
+
+    public static long getDataSequenceNumber(ContentFile<?> file)
+    {
+        if (file.dataSequenceNumber() != null) {
+            return file.dataSequenceNumber();
+        }
+        return file.fileSequenceNumber();
     }
 }

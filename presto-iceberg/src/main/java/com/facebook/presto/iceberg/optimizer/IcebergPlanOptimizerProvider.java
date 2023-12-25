@@ -33,6 +33,7 @@ public class IcebergPlanOptimizerProvider
         implements ConnectorPlanOptimizerProvider
 {
     private final Set<ConnectorPlanOptimizer> planOptimizers;
+    private final Set<ConnectorPlanOptimizer> logicalPlanOptimizers;
 
     @Inject
     public IcebergPlanOptimizerProvider(
@@ -55,12 +56,16 @@ public class IcebergPlanOptimizerProvider
                 new IcebergPlanOptimizer(functionResolution, rowExpressionService, transactionManager),
                 new IcebergFilterPushdown(rowExpressionService, functionResolution, functionMetadataManager, transactionManager, resourceFactory, hdfsEnvironment, typeManager),
                 new IcebergParquetDereferencePushDown(transactionManager, rowExpressionService, typeManager));
+        this.logicalPlanOptimizers = ImmutableSet.<ConnectorPlanOptimizer>builder()
+                .addAll(this.planOptimizers)
+                .add(new IcebergEqualityDeleteAsJoin(functionResolution, transactionManager, typeManager))
+                .build();
     }
 
     @Override
     public Set<ConnectorPlanOptimizer> getLogicalPlanOptimizers()
     {
-        return planOptimizers;
+        return logicalPlanOptimizers;
     }
 
     @Override

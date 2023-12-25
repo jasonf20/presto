@@ -82,6 +82,7 @@ public final class IcebergSessionProperties
     public static final String PARQUET_DEREFERENCE_PUSHDOWN_ENABLED = "parquet_dereference_pushdown_enabled";
     public static final String MERGE_ON_READ_MODE_ENABLED = "merge_on_read_enabled";
     public static final String PUSHDOWN_FILTER_ENABLED = "pushdown_filter_enabled";
+    public static final String DELETE_AS_JOIN_PUSHDOWN_ENABLED = "delete_as_join_pushdown_enabled";
     public static final String HIVE_METASTORE_STATISTICS_MERGE_STRATEGY = "hive_statistics_merge_strategy";
     public static final String STATISTIC_SNAPSHOT_RECORD_DIFFERENCE_WEIGHT = "statistic_snapshot_record_difference_weight";
 
@@ -317,6 +318,11 @@ public final class IcebergSessionProperties
                                 "value of 1 means a single record is equivalent to 1 millisecond of " +
                                 "time difference.",
                         icebergConfig.getStatisticSnapshotRecordDifferenceWeight(),
+                        false),
+                booleanProperty(
+                        DELETE_AS_JOIN_PUSHDOWN_ENABLED,
+                        "When enabled equality delete row filtering will be pushed down into a join.",
+                        icebergConfig.isPushdownFilterEnabled(),
                         false));
     }
 
@@ -496,5 +502,10 @@ public final class IcebergSessionProperties
     public static double getStatisticSnapshotRecordDifferenceWeight(ConnectorSession session)
     {
         return session.getProperty(STATISTIC_SNAPSHOT_RECORD_DIFFERENCE_WEIGHT, Double.class);
+    }
+
+    public static boolean isDeleteToJoinPushdownEnabled(ConnectorSession session)
+    {
+        return session.getProperty(DELETE_AS_JOIN_PUSHDOWN_ENABLED, Boolean.class);
     }
 }
