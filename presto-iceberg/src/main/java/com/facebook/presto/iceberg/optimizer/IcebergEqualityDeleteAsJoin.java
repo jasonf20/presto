@@ -81,6 +81,25 @@ import static com.facebook.presto.iceberg.IcebergUtil.getIcebergTable;
 import static com.facebook.presto.spi.ConnectorPlanRewriter.rewriteWith;
 import static java.util.Objects.requireNonNull;
 
+/**
+ * <p>This optimizer implements equality deletes as a join, rather than having each split read the delete files and apply them.
+ * This approach significantly enhances performance for equality deletes, as most delete files will apply to most splits,
+ * and opening the delete file in each split incurs considerable overhead. Usually, the delete files are relatively small
+ * and can be broadcast easily. Each delete file may have a different schema, though typically there will be only a few delete
+ * schemas, often just one (the primary key).</p>
+ *
+ * <p>For example, consider the following query:
+ * <code>SELECT * FROM table;</code>
+ * With 2 delete schemas: (pk), (orderid), the query will be transformed into:
+ * <pre>
+ * SELECT "$data_sequence_number", * FROM table
+ * LEFT JOIN "table$equality_deletes1" d1 ON left.pk = d1.pk AND left."$data_sequence_number" < d1."$data_sequence_number" -- Find deletes by schema 1
+ * LEFT JOIN "table$equality_deletes2" d2 ON left.orderid = d1.orderid AND left."$data_sequence_number" < d2."$data_sequence_number" -- Find deletes by schema 2
+ * WHERE COALESCE(d1."$data_sequence_number", d2."data_sequence_number") IS NULL -- None of the delete files had a delete for this row
+ * </pre>
+ * Note that table$equality_deletes1 and table$equality_deletes2 are different tables, each containing only the delete files with the schema for this join.</p>
+ */
+
 public class IcebergEqualityDeleteAsJoin
         implements ConnectorPlanOptimizer
 {
@@ -146,13 +165,13 @@ public class IcebergEqualityDeleteAsJoin
 
             IcebergAbstractMetadata metadata = (IcebergAbstractMetadata) transactionManager.get(table.getTransaction());
             Table icebergTable = getIcebergTable(metadata, session, icebergTableHandle.getSchemaTableName());
-            HashSet<Set<Integer>> deleteSchemas = new HashSet<>();
-            Map<Integer, PartitionFieldInfo> partitionFields = new HashMap<>();
+            HashMap<Set<Integer>, DeleteSetInfo> deleteInfos = new HashMap<>();
             try (CloseableIterator<DeleteFile> files =
-                    IcebergUtil.getDeleteFiles(icebergTable, tableName.getSnapshotId().get(), icebergTableHandle.getPredicate()).iterator()) {
+                    IcebergUtil.getDeleteFiles(icebergTable, tableName.getSnapshotId().get(), icebergTableHandle.getPredicate(), Optional.empty()).iterator()) {
                 while (files.hasNext()) {
                     DeleteFile delete = files.next();
                     if (delete.content() == FileContent.EQUALITY_DELETES) {
+                        Map<Integer, PartitionFieldInfo> partitionFields = new HashMap<>();
                         PartitionSpec partitionSpec = icebergTable.specs().get(delete.specId());
                         Types.StructType partitionType = partitionSpec.partitionType();
                         partitionSpec.fields().forEach(f -> partitionFields.put(f.fieldId(), new PartitionFieldInfo(partitionType.field(f.fieldId()), f)));
@@ -160,7 +179,7 @@ public class IcebergEqualityDeleteAsJoin
                         HashSet<Integer> result = new HashSet<>();
                         result.addAll(delete.equalityFieldIds());
                         result.addAll(partitionFieldIds);
-                        deleteSchemas.add(ImmutableSet.copyOf(result));
+                        deleteInfos.put(ImmutableSet.copyOf(result), new DeleteSetInfo(partitionFields, delete.equalityFieldIds()));
                     }
                 }
             }
@@ -168,14 +187,13 @@ public class IcebergEqualityDeleteAsJoin
                 return node;
             }
 
-            if (deleteSchemas.isEmpty()) {
+            if (deleteInfos.isEmpty()) {
                 // no equality deletes
                 return node;
             }
 
             // Add all the fields required by the join that were not added by the user's query
-            ImmutableMap<VariableReferenceExpression, ColumnHandle> unselectedAssignments =
-                    createAssignmentsForUnselectedFields(node, deleteSchemas, partitionFields, icebergTable);
+            ImmutableMap<VariableReferenceExpression, ColumnHandle> unselectedAssignments = createAssignmentsForUnselectedFields(node, deleteInfos, icebergTable);
 
             TableScanNode updatedTableScan = createNewRoot(node, icebergTableHandle, tableName, unselectedAssignments, table);
             Map<Integer, VariableReferenceExpression> reverseAssignmentsMap =
@@ -183,18 +201,23 @@ public class IcebergEqualityDeleteAsJoin
 
             List<RowExpression> deleteVersionColumns = new ArrayList<>();
             PlanNode parentJoin = updatedTableScan;
-            for (Set<Integer> deleteSchema : deleteSchemas) {
+            for (Map.Entry<Set<Integer>, DeleteSetInfo> entry : deleteInfos.entrySet()) {
+                Set<Integer> deleteSchema = entry.getKey();
+                DeleteSetInfo deleteGroupInfo = entry.getValue();
+
                 List<Types.NestedField> deleteFields = deleteSchema
                         .stream()
                         .map(fieldId -> icebergTable.schema().findField(fieldId))
                         .filter(Objects::nonNull)
                         .collect(Collectors.toList());
+
                 VariableReferenceExpression joinSequenceNumber = toVariableReference(IcebergColumnHandle.dataSequenceNumberColumnHandle());
                 deleteVersionColumns.add(joinSequenceNumber);
                 ImmutableMap<VariableReferenceExpression, ColumnHandle> deleteColumnAssignments = ImmutableMap.<VariableReferenceExpression, ColumnHandle>builder()
                         .putAll(deleteFields.stream().collect(Collectors.toMap(this::toVariableReference, this::toIcebergColumnHandle)))
                         .put(joinSequenceNumber, IcebergColumnHandle.dataSequenceNumberColumnHandle())
                         .build();
+
                 Set<ConnectorJoinNode.EquiJoinClause> clauses = deleteColumnAssignments.entrySet().stream()
                         .filter(f -> !IcebergMetadataColumn.isMetadataColumnId(((IcebergColumnHandle) (f.getValue())).getId()))
                         .map(kvp -> {
@@ -209,19 +232,13 @@ public class IcebergEqualityDeleteAsJoin
                         BooleanType.BOOLEAN,
                         Collections.unmodifiableList(Arrays.asList(sourceSequenceNumber, joinSequenceNumber)));
 
-                List<VariableReferenceExpression> outputs = deleteColumnAssignments.keySet().asList();
-                IcebergTableHandle deletesTableHanlde = new IcebergTableHandle(icebergTableHandle.getSchemaName(),
-                        new IcebergTableName(tableName.getTableName(), TableType.EQUALITY_DELETES, tableName.getSnapshotId(), Optional.empty()),
-                        icebergTableHandle.isSnapshotSpecified(),
-                        icebergTableHandle.getPredicate(),
-                        Optional.of(SchemaParser.toJson(new Schema(deleteFields))));
-                TableScanNode deleteTableScan = new TableScanNode(Optional.empty(),
-                        idAllocator.getNextId(),
-                        new TableHandle(table.getConnectorId(), deletesTableHanlde, table.getTransaction(), table.getLayout(), table.getDynamicFilter()),
-                        outputs,
+                TableScanNode deleteTableScan = createDeletesTableScan(node,
                         deleteColumnAssignments,
-                        node.getCurrentConstraint(),
-                        node.getEnforcedConstraint());
+                        icebergTableHandle,
+                        tableName,
+                        deleteFields,
+                        table,
+                        deleteGroupInfo);
 
                 parentJoin = new ConnectorJoinNode(idAllocator.getNextId(),
                         Arrays.asList(parentJoin, deleteTableScan),
@@ -239,6 +256,31 @@ public class IcebergEqualityDeleteAsJoin
             return filter;
         }
 
+        private TableScanNode createDeletesTableScan(TableScanNode node,
+                ImmutableMap<VariableReferenceExpression, ColumnHandle> deleteColumnAssignments,
+                IcebergTableHandle icebergTableHandle,
+                IcebergTableName tableName,
+                List<Types.NestedField> deleteFields,
+                TableHandle table,
+                DeleteSetInfo deleteInfo)
+        {
+            List<VariableReferenceExpression> outputs = deleteColumnAssignments.keySet().asList();
+            IcebergTableHandle deletesTableHandle = new IcebergTableHandle(icebergTableHandle.getSchemaName(),
+                    new IcebergTableName(tableName.getTableName(), TableType.EQUALITY_DELETES, tableName.getSnapshotId(), Optional.empty()),
+                    icebergTableHandle.isSnapshotSpecified(),
+                    icebergTableHandle.getPredicate(),
+                    Optional.of(SchemaParser.toJson(new Schema(deleteFields))),
+                    Optional.of(deleteInfo.equalityFieldIds));
+
+            return new TableScanNode(Optional.empty(),
+                    idAllocator.getNextId(),
+                    new TableHandle(table.getConnectorId(), deletesTableHandle, table.getTransaction(), table.getLayout(), table.getDynamicFilter()),
+                    outputs,
+                    deleteColumnAssignments,
+                    node.getCurrentConstraint(),
+                    node.getEnforcedConstraint());
+        }
+
         /**
          * - Updates table handle to DATA_WITHOUT_EQUALITY_DELETES since the page source for this node should now not apply equality deletes.
          * - Adds extra assignments and outputs that are needed by the join
@@ -249,7 +291,8 @@ public class IcebergEqualityDeleteAsJoin
                     new IcebergTableName(tableName.getTableName(), TableType.DATE_WITHOUT_EQUALITY_DELETES, tableName.getSnapshotId(), tableName.getChangelogEndSnapshot()),
                     icebergTableHandle.isSnapshotSpecified(),
                     icebergTableHandle.getPredicate(),
-                    icebergTableHandle.getTableSchemaJson());
+                    icebergTableHandle.getTableSchemaJson(),
+                    icebergTableHandle.getEqualityFieldIds());
 
             VariableReferenceExpression dataSequenceNumberVariableReference = toVariableReference(IcebergColumnHandle.dataSequenceNumberColumnHandle());
             ImmutableMap.Builder<VariableReferenceExpression, ColumnHandle> assignmentsBuilder = ImmutableMap.<VariableReferenceExpression, ColumnHandle>builder()
@@ -275,13 +318,16 @@ public class IcebergEqualityDeleteAsJoin
         }
 
         private ImmutableMap<VariableReferenceExpression, ColumnHandle> createAssignmentsForUnselectedFields(TableScanNode node,
-                HashSet<Set<Integer>> deleteSchemas,
-                Map<Integer, PartitionFieldInfo> partitionFields,
+                HashMap<Set<Integer>, DeleteSetInfo> deleteInfos,
                 Table icebergTable)
         {
             Set<Integer> selectedFields = node.getAssignments().values().stream().map(f -> ((IcebergColumnHandle) f).getId()).collect(Collectors.toSet());
-            Set<Integer> unselectedFields = Sets.difference(deleteSchemas.stream().reduce(Sets::union).orElseGet(Collections::emptySet), selectedFields);
+            Set<Integer> unselectedFields = Sets.difference(deleteInfos.keySet().stream().reduce(Sets::union).orElseGet(Collections::emptySet), selectedFields);
             ImmutableMap.Builder<VariableReferenceExpression, ColumnHandle> unselectedAssignmentsBuilder = ImmutableMap.builder();
+            ImmutableMap<Integer, PartitionFieldInfo> partitionFields = deleteInfos.values().stream()
+                    .map(DeleteSetInfo::getPartitionFields)
+                    .reduce((a, b) -> new ImmutableMap.Builder<Integer, PartitionFieldInfo>().putAll(a).putAll(b).build())
+                    .orElseGet(ImmutableMap::of);
             unselectedFields
                     .forEach(fieldId -> {
                         if (partitionFields.containsKey(fieldId)) {
@@ -290,7 +336,7 @@ public class IcebergEqualityDeleteAsJoin
                             Type partitionFieldType = TypeConverter.toPrestoType(partitionFieldInfo.getPartitionField().transform().getResultType(sourceField.type()), typeManager);
                             unselectedAssignmentsBuilder.put(
                                     variableAllocator.newVariable(partitionFieldInfo.getPartitionField().name(), partitionFieldType),
-                                    IcebergColumnHandle.create(partitionFieldInfo.getNestedField(), typeManager, PARTITION_KEY));
+                                    partitionFieldInfo.columnHandle(typeManager));
                         }
                         else {
                             Types.NestedField schemaField = icebergTable.schema().findField(fieldId);
@@ -341,6 +387,43 @@ public class IcebergEqualityDeleteAsJoin
             public Types.NestedField getNestedField()
             {
                 return nestedField;
+            }
+
+            public IcebergColumnHandle columnHandle(TypeManager typeManager)
+            {
+                return IcebergColumnHandle.create(getNestedField(), typeManager, PARTITION_KEY);
+            }
+        }
+
+        private static class DeleteSetInfo
+        {
+            private final ImmutableMap<Integer, PartitionFieldInfo> partitionFields;
+            private final Set<Integer> equalityFieldIds;
+
+            private DeleteSetInfo(Map<Integer, PartitionFieldInfo> partitionFields,
+                    List<Integer> equalityFieldIds)
+            {
+                this.partitionFields = ImmutableMap.copyOf(partitionFields);
+                this.equalityFieldIds = ImmutableSet.copyOf(equalityFieldIds);
+            }
+
+            public ImmutableMap<Integer, PartitionFieldInfo> getPartitionFields()
+            {
+                return partitionFields;
+            }
+
+            public Set<IcebergColumnHandle> dataColumnHandles(Schema schema, TypeManager typeManager)
+            {
+                return equalityFieldIds.stream().map(id -> IcebergColumnHandle.create(schema.findField(id), typeManager, REGULAR)).collect(Collectors.toSet());
+            }
+
+            public List<IcebergColumnHandle> partitionColumnHandles(TypeManager typeManager)
+            {
+                return partitionFields
+                        .values()
+                        .stream()
+                        .map(f -> f.columnHandle(typeManager))
+                        .collect(Collectors.toList());
             }
         }
     }

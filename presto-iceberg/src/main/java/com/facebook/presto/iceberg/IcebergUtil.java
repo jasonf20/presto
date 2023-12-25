@@ -44,11 +44,13 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.iceberg.BaseTable;
 import org.apache.iceberg.ContentFile;
 import org.apache.iceberg.ContentScanTask;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.DeleteFile;
+import org.apache.iceberg.FileContent;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.FileScanTask;
 import org.apache.iceberg.HistoryEntry;
@@ -732,34 +734,10 @@ public final class IcebergUtil
         return Collections.unmodifiableMap(partitionKeys);
     }
 
-//    public static CloseableIterable<DeleteFile> getDeleteFiles(Table table, long snapshot, TupleDomain<IcebergColumnHandle> filter)
-//    {
-//        Expression filterExpression = toIcebergExpression(filter);
-//        LoadingCache<Integer, ManifestEvaluator> evalCache =
-//                Caffeine.newBuilder()
-//                        .build(
-//                                specId -> {
-//                                    PartitionSpec spec = table.specs().get(specId);
-//                                    return ManifestEvaluator.forRowFilter(filterExpression, spec, false);
-//                                });
-//        List<ManifestFile> manifests = table.snapshot(snapshot)
-//                .deleteManifests(table.io())
-//                .stream()
-//                .filter(m -> evalCache.get(m.partitionSpecId()).eval(m))
-//                .collect(Collectors.toList());
-//
-//        return manifests.stream()
-//                .<CloseableIterable<DeleteFile>>map(manifest -> ManifestFiles
-//                        .readDeleteManifest(manifest, table.io(), table.specs())
-//                        .filterRows(filterExpression))
-//                .reduce((a, b) -> {
-//                    List<CloseableIterable<DeleteFile>> list = ImmutableList.of(a, b);
-//                    return CloseableIterable.concat(list);
-//                })
-//                .orElseGet(CloseableIterable::empty);
-//    }
-
-    public static CloseableIterable<DeleteFile> getDeleteFiles(Table table, long snapshot, TupleDomain<IcebergColumnHandle> filter)
+    public static CloseableIterable<DeleteFile> getDeleteFiles(Table table,
+            long snapshot,
+            TupleDomain<IcebergColumnHandle> filter,
+            Optional<Set<Integer>> requestedSchema)
     {
         Expression filterExpression = toIcebergExpression(filter);
         CloseableIterator<FileScanTask> fileTasks = table.newScan().useSnapshot(snapshot).filter(filterExpression).planFiles().iterator();
@@ -796,11 +774,16 @@ public final class IcebergUtil
                             if (!currentDeletes.hasNext()) {
                                 currentDeletes = fileTasks.next().deletes().iterator();
                             }
-                            if (currentDeletes.hasNext()) {
+                            while (currentDeletes.hasNext()) {
                                 DeleteFile item = currentDeletes.next();
-                                if (seenFiles.add(item.path().toString())) {
-                                    currentFile = item;
-                                    return true;
+                                if (item.content() == FileContent.POSITION_DELETES ||
+                                        !requestedSchema.isPresent() ||
+                                        requestedSchema.get().equals(ImmutableSet.copyOf(item.equalityFieldIds()))) {
+                                    // If there is a requested schema only include files that match it
+                                    if (seenFiles.add(item.path().toString())) {
+                                        currentFile = item;
+                                        return true;
+                                    }
                                 }
                             }
                         }

@@ -321,7 +321,7 @@ public final class IcebergSessionProperties
                         false),
                 booleanProperty(
                         DELETE_AS_JOIN_PUSHDOWN_ENABLED,
-                        "Experimental: Enable equality delete filters as a join.",
+                        "When enabled equality delete row filtering will be pushed down into a join.",
                         icebergConfig.isPushdownFilterEnabled(),
                         false));
     }

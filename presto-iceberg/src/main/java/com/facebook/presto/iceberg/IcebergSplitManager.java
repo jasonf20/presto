@@ -80,7 +80,10 @@ public class IcebergSplitManager
             return new ChangelogSplitSource(session, typeManager, icebergTable, scan, scan.targetSplitSize());
         }
         else if (table.getTableName().getTableType() == EQUALITY_DELETES) {
-            CloseableIterable<DeleteFile> deleteFiles = IcebergUtil.getDeleteFiles(icebergTable, table.getTableName().getSnapshotId().get(), table.getPredicate());
+            CloseableIterable<DeleteFile> deleteFiles = IcebergUtil.getDeleteFiles(icebergTable,
+                    table.getTableName().getSnapshotId().get(),
+                    table.getPredicate(),
+                    table.getEqualityFieldIds());
 
             return new EqualityDeletesSplitSource(session, icebergTable, deleteFiles);
         }
