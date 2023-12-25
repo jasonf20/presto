@@ -114,6 +114,7 @@ public class IcebergSplitSource
                 getNodeSelectionStrategy(session),
                 SplitWeight.fromProportion(Math.min(Math.max((double) task.length() / tableScan.targetSplitSize(), minimumAssignedSplitWeight), 1.0)),
                 task.deletes().stream().map(DeleteFile::fromIceberg).collect(toImmutableList()),
-                Optional.empty());
+                Optional.empty(),
+                IcebergUtil.getDataSequenceNumber(task.file()));
     }
 }

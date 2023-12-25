@@ -16,6 +16,7 @@ package com.facebook.presto.iceberg.changelog;
 import com.facebook.presto.common.type.TypeManager;
 import com.facebook.presto.iceberg.IcebergColumnHandle;
 import com.facebook.presto.iceberg.IcebergSplit;
+import com.facebook.presto.iceberg.IcebergUtil;
 import com.facebook.presto.spi.ConnectorSession;
 import com.facebook.presto.spi.ConnectorSplit;
 import com.facebook.presto.spi.ConnectorSplitSource;
@@ -128,6 +129,7 @@ public class ChangelogSplitSource
                 Optional.of(new ChangelogSplitInfo(changeTask.operation(),
                         changeTask.changeOrdinal(),
                         changeTask.commitSnapshotId(),
-                        columnHandles)));
+                        columnHandles)),
+                IcebergUtil.getDataSequenceNumber(task.file()));
     }
 }

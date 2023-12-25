@@ -18,6 +18,7 @@ import com.facebook.presto.common.type.Type;
 import com.facebook.presto.common.type.TypeManager;
 import com.facebook.presto.hive.BaseHiveColumnHandle;
 import com.facebook.presto.spi.ColumnHandle;
+import com.facebook.presto.spi.ColumnMetadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -30,8 +31,11 @@ import java.util.Optional;
 
 import static com.facebook.presto.iceberg.ColumnIdentity.createColumnIdentity;
 import static com.facebook.presto.iceberg.ColumnIdentity.primitiveColumnIdentity;
+import static com.facebook.presto.iceberg.IcebergColumnHandle.ColumnType.METADATA;
 import static com.facebook.presto.iceberg.IcebergColumnHandle.ColumnType.REGULAR;
 import static com.facebook.presto.iceberg.IcebergColumnHandle.ColumnType.SYNTHESIZED;
+import static com.facebook.presto.iceberg.IcebergMetadataColumn.DATA_SEQUENCE_NUMBER;
+import static com.facebook.presto.iceberg.IcebergMetadataColumn.FILE_PATH;
 import static com.facebook.presto.iceberg.TypeConverter.toPrestoType;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.getOnlyElement;
@@ -160,6 +164,59 @@ public class IcebergColumnHandle
         return getId() + ":" + getName() + ":" + type.getDisplayName() + ":" + columnType + ":" + requiredSubfields;
     }
 
+    public static IcebergColumnHandle pathColumnHandle()
+    {
+        return getIcebergColumnHandle(FILE_PATH);
+    }
+
+    public static ColumnMetadata pathColumnMetadata()
+    {
+        return getColumnMetadata(FILE_PATH);
+    }
+
+    public static IcebergColumnHandle dataSequenceNumberColumnHandle()
+    {
+        return getIcebergColumnHandle(DATA_SEQUENCE_NUMBER);
+    }
+
+    private static IcebergColumnHandle getIcebergColumnHandle(IcebergMetadataColumn metadataColumn)
+    {
+        return new IcebergColumnHandle(
+                columIdentity(metadataColumn),
+                metadataColumn.getType(),
+                Optional.empty(),
+                METADATA);
+    }
+
+    public static ColumnMetadata dataSequenceNumberColumnMetadata()
+    {
+        return getColumnMetadata(DATA_SEQUENCE_NUMBER);
+    }
+
+    private static ColumnMetadata getColumnMetadata(IcebergMetadataColumn metadataColumn)
+    {
+        return ColumnMetadata.builder()
+                .setName(metadataColumn.getColumnName())
+                .setType(metadataColumn.getType())
+                .setHidden(true)
+                .build();
+    }
+
+    private static ColumnIdentity columIdentity(IcebergMetadataColumn metadata)
+    {
+        return new ColumnIdentity(metadata.getId(), metadata.getColumnName(), metadata.getTypeCategory(), ImmutableList.of());
+    }
+
+    public boolean isPathColumn()
+    {
+        return getColumnIdentity().getId() == FILE_PATH.getId();
+    }
+
+    public boolean isDataSequenceNumberColumn()
+    {
+        return getColumnIdentity().getId() == DATA_SEQUENCE_NUMBER.getId();
+    }
+
     public static IcebergColumnHandle primitiveIcebergColumnHandle(int id, String name, Type type, Optional<String> comment)
     {
         return new IcebergColumnHandle(primitiveColumnIdentity(id, name), type, comment, REGULAR);
@@ -178,7 +235,8 @@ public class IcebergColumnHandle
     {
         PARTITION_KEY,
         REGULAR,
-        SYNTHESIZED
+        SYNTHESIZED,
+        METADATA
     }
 
     public static Subfield getPushedDownSubfield(IcebergColumnHandle column)
