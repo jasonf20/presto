@@ -19,6 +19,7 @@ import com.facebook.presto.metadata.FunctionAndTypeManager;
 import com.facebook.presto.spi.VariableAllocator;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.Assignments;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.FilterNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeIdAllocator;
@@ -260,7 +261,7 @@ public class TransformCorrelatedInPredicateToJoin
         return new JoinNode(
                 probeSide.getSourceLocation(),
                 idAllocator.getNextId(),
-                JoinNode.Type.LEFT,
+                ConnectorJoinNode.Type.LEFT,
                 probeSide,
                 buildSide,
                 ImmutableList.of(),

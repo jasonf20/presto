@@ -18,6 +18,7 @@ import com.facebook.presto.metadata.FunctionAndTypeManager;
 import com.facebook.presto.metadata.OperatorNotFoundException;
 import com.facebook.presto.spi.ColumnHandle;
 import com.facebook.presto.spi.plan.AggregationNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.DistinctLimitNode;
 import com.facebook.presto.spi.plan.FilterNode;
 import com.facebook.presto.spi.plan.LimitNode;
@@ -338,7 +339,7 @@ public class EffectivePredicateExtractor
             }
         }
 
-        private RowExpression toRowExpression(JoinNode.EquiJoinClause equiJoinClause)
+        private RowExpression toRowExpression(ConnectorJoinNode.EquiJoinClause equiJoinClause)
         {
             return buildEqualsExpression(functionManger, equiJoinClause.getLeft(), equiJoinClause.getRight());
         }

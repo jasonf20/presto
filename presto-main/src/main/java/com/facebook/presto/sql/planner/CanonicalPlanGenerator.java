@@ -24,6 +24,7 @@ import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.AggregationNode.Aggregation;
 import com.facebook.presto.spi.plan.AggregationNode.GroupingSetDescriptor;
 import com.facebook.presto.spi.plan.Assignments;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.DistinctLimitNode;
 import com.facebook.presto.spi.plan.FilterNode;
 import com.facebook.presto.spi.plan.LimitNode;
@@ -271,12 +272,12 @@ public class CanonicalPlanGenerator
         if (strategy == DEFAULT) {
             return Optional.empty();
         }
-        if (node.getType().equals(JoinNode.Type.RIGHT)) {
+        if (node.getType().equals(ConnectorJoinNode.Type.RIGHT)) {
             return visitJoin(node.flipChildren(), context);
         }
         List<PlanNode> sources = new ArrayList<>();
         ImmutableList.Builder<RowExpression> allFilters = ImmutableList.builder();
-        ImmutableList.Builder<JoinNode.EquiJoinClause> criterias = ImmutableList.builder();
+        ImmutableList.Builder<ConnectorJoinNode.EquiJoinClause> criterias = ImmutableList.builder();
         Stack<JoinNode> stack = new Stack<>();
 
         stack.push(node);
@@ -288,7 +289,7 @@ public class CanonicalPlanGenerator
             if (top.getFilter().isPresent()) {
                 List<RowExpression> filters = extractConjuncts(top.getFilter().get());
                 filters.forEach(filter -> {
-                    Optional<JoinNode.EquiJoinClause> criteria = toEquiJoinClause(filter);
+                    Optional<ConnectorJoinNode.EquiJoinClause> criteria = toEquiJoinClause(filter);
                     criteria.ifPresent(criterias::add);
                     allFilters.add(filter);
                 });
@@ -306,7 +307,7 @@ public class CanonicalPlanGenerator
         }
 
         // Sort sources if all are INNER, or full outer join of 2 nodes
-        if (shouldMergeJoinNodes(node.getType()) || (node.getType().equals(JoinNode.Type.FULL) && sources.size() == 2)) {
+        if (shouldMergeJoinNodes(node.getType()) || (node.getType().equals(ConnectorJoinNode.Type.FULL) && sources.size() == 2)) {
             Optional<List<Integer>> sourceIndexes = orderSources(sources);
             if (!sourceIndexes.isPresent()) {
                 return Optional.empty();
@@ -322,9 +323,9 @@ public class CanonicalPlanGenerator
             }
             newSources.add(newSource.get());
         }
-        Set<JoinNode.EquiJoinClause> newCriterias = criterias.build().stream()
+        Set<ConnectorJoinNode.EquiJoinClause> newCriterias = criterias.build().stream()
                 .map(criteria -> canonicalize(criteria, context))
-                .sorted(comparing(JoinNode.EquiJoinClause::toString))
+                .sorted(comparing(ConnectorJoinNode.EquiJoinClause::toString))
                 .collect(toCollection(LinkedHashSet::new));
         Set<RowExpression> newFilters = allFilters.build().stream()
                 .map(filter -> inlineAndCanonicalize(context.getExpressions(), filter))
@@ -1134,9 +1135,9 @@ public class CanonicalPlanGenerator
         return Optional.of(canonicalPlan);
     }
 
-    private boolean shouldMergeJoinNodes(JoinNode.Type type)
+    private boolean shouldMergeJoinNodes(ConnectorJoinNode.Type type)
     {
-        return type.equals(JoinNode.Type.INNER);
+        return type.equals(ConnectorJoinNode.Type.INNER);
     }
 
     private VariableReferenceExpression rename(VariableReferenceExpression variable, String nameHint, Context context)
@@ -1156,14 +1157,14 @@ public class CanonicalPlanGenerator
         }
     }
 
-    private static JoinNode.EquiJoinClause canonicalize(JoinNode.EquiJoinClause criteria, Context context)
+    private static ConnectorJoinNode.EquiJoinClause canonicalize(ConnectorJoinNode.EquiJoinClause criteria, Context context)
     {
         VariableReferenceExpression left = inlineAndCanonicalize(context.getExpressions(), criteria.getLeft());
         VariableReferenceExpression right = inlineAndCanonicalize(context.getExpressions(), criteria.getRight());
-        return left.compareTo(right) > 0 ? new JoinNode.EquiJoinClause(left, right) : new JoinNode.EquiJoinClause(right, left);
+        return left.compareTo(right) > 0 ? new ConnectorJoinNode.EquiJoinClause(left, right) : new ConnectorJoinNode.EquiJoinClause(right, left);
     }
 
-    private static Optional<JoinNode.EquiJoinClause> toEquiJoinClause(RowExpression expression)
+    private static Optional<ConnectorJoinNode.EquiJoinClause> toEquiJoinClause(RowExpression expression)
     {
         if (!(expression instanceof CallExpression)) {
             return Optional.empty();
@@ -1178,7 +1179,7 @@ public class CanonicalPlanGenerator
             return Optional.empty();
         }
 
-        return Optional.of(new JoinNode.EquiJoinClause(
+        return Optional.of(new ConnectorJoinNode.EquiJoinClause(
                 (VariableReferenceExpression) callExpression.getArguments().get(0),
                 (VariableReferenceExpression) callExpression.getArguments().get(1)));
     }

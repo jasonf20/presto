@@ -28,6 +28,7 @@ import com.facebook.presto.spi.WarningCollector;
 import com.facebook.presto.spi.connector.ConnectorNodePartitioningProvider;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.Assignments;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.DistinctLimitNode;
 import com.facebook.presto.spi.plan.FilterNode;
 import com.facebook.presto.spi.plan.LimitNode;
@@ -821,10 +822,10 @@ public class AddExchanges
         public PlanWithProperties visitJoin(JoinNode node, PreferredProperties preferredProperties)
         {
             List<VariableReferenceExpression> leftVariables = node.getCriteria().stream()
-                    .map(JoinNode.EquiJoinClause::getLeft)
+                    .map(ConnectorJoinNode.EquiJoinClause::getLeft)
                     .collect(toImmutableList());
             List<VariableReferenceExpression> rightVariables = node.getCriteria().stream()
-                    .map(JoinNode.EquiJoinClause::getRight)
+                    .map(ConnectorJoinNode.EquiJoinClause::getRight)
                     .collect(toImmutableList());
 
             JoinNode.DistributionType distributionType = node.getDistributionType().orElseThrow(() -> new IllegalArgumentException("distributionType not yet set"));

@@ -20,6 +20,7 @@ import com.facebook.presto.spi.VariableAllocator;
 import com.facebook.presto.spi.WarningCollector;
 import com.facebook.presto.spi.plan.AggregationNode;
 import com.facebook.presto.spi.plan.Assignments;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.CteConsumerNode;
 import com.facebook.presto.spi.plan.CteProducerNode;
 import com.facebook.presto.spi.plan.CteReferenceNode;
@@ -91,9 +92,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.INNER;
 import static com.facebook.presto.sql.analyzer.ExpressionTreeUtils.getNodeLocation;
 import static com.facebook.presto.sql.planner.optimizations.ApplyNodeUtil.verifySubquerySupported;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
 import static com.facebook.presto.sql.relational.Expressions.call;
 import static com.facebook.presto.sql.relational.Expressions.isNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -568,7 +569,7 @@ public class UnaliasSymbolReferences
             PlanNode left = context.rewrite(node.getLeft());
             PlanNode right = context.rewrite(node.getRight());
 
-            List<JoinNode.EquiJoinClause> canonicalCriteria = canonicalizeJoinCriteria(node.getCriteria());
+            List<ConnectorJoinNode.EquiJoinClause> canonicalCriteria = canonicalizeJoinCriteria(node.getCriteria());
             Optional<RowExpression> canonicalFilter = node.getFilter().map(this::canonicalize);
             Optional<VariableReferenceExpression> canonicalLeftHashVariable = canonicalize(node.getLeftHashVariable());
             Optional<VariableReferenceExpression> canonicalRightHashVariable = canonicalize(node.getRightHashVariable());
@@ -809,11 +810,11 @@ public class UnaliasSymbolReferences
                     .collect(toImmutableSet());
         }
 
-        private List<JoinNode.EquiJoinClause> canonicalizeJoinCriteria(List<JoinNode.EquiJoinClause> criteria)
+        private List<ConnectorJoinNode.EquiJoinClause> canonicalizeJoinCriteria(List<ConnectorJoinNode.EquiJoinClause> criteria)
         {
-            ImmutableList.Builder<JoinNode.EquiJoinClause> builder = ImmutableList.builder();
-            for (JoinNode.EquiJoinClause clause : criteria) {
-                builder.add(new JoinNode.EquiJoinClause(canonicalize(clause.getLeft()), canonicalize(clause.getRight())));
+            ImmutableList.Builder<ConnectorJoinNode.EquiJoinClause> builder = ImmutableList.builder();
+            for (ConnectorJoinNode.EquiJoinClause clause : criteria) {
+                builder.add(new ConnectorJoinNode.EquiJoinClause(canonicalize(clause.getLeft()), canonicalize(clause.getRight())));
             }
 
             return builder.build();

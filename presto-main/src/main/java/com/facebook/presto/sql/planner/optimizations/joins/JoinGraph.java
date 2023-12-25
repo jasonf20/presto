@@ -13,6 +13,7 @@
  */
 package com.facebook.presto.sql.planner.optimizations.joins;
 
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.FilterNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
@@ -34,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.INNER;
 import static com.facebook.presto.sql.relational.ProjectNodeUtils.isIdentity;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -182,7 +183,7 @@ public class JoinGraph
         return builder.toString();
     }
 
-    private JoinGraph joinWith(JoinGraph other, List<JoinNode.EquiJoinClause> joinClauses, Context context, PlanNodeId newRoot)
+    private JoinGraph joinWith(JoinGraph other, List<ConnectorJoinNode.EquiJoinClause> joinClauses, Context context, PlanNodeId newRoot)
     {
         for (PlanNode node : other.nodes) {
             checkState(!edges.containsKey(node.getId()), format("Node [%s] appeared in two JoinGraphs", node));
@@ -202,7 +203,7 @@ public class JoinGraph
                 .addAll(other.filters)
                 .build();
 
-        for (JoinNode.EquiJoinClause edge : joinClauses) {
+        for (ConnectorJoinNode.EquiJoinClause edge : joinClauses) {
             VariableReferenceExpression leftVariable = edge.getLeft();
             VariableReferenceExpression rightVariable = edge.getRight();
             checkState(context.containsVariable(leftVariable));

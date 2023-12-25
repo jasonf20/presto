@@ -15,6 +15,7 @@ package com.facebook.presto.sql.planner.plan;
 
 import com.facebook.presto.metadata.FunctionAndTypeManager;
 import com.facebook.presto.spi.SourceLocation;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.LogicalProperties;
 import com.facebook.presto.spi.plan.LogicalPropertiesProvider;
 import com.facebook.presto.spi.plan.PlanNode;
@@ -35,18 +36,17 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.FULL;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.LEFT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.SortExpressionExtractor.extractSortExpression;
 import static com.facebook.presto.sql.planner.plan.JoinNode.DistributionType.PARTITIONED;
 import static com.facebook.presto.sql.planner.plan.JoinNode.DistributionType.REPLICATED;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.FULL;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.LEFT;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.sanity.ValidateDependenciesChecker.checkLeftOutputVariablesBeforeRight;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -57,10 +57,10 @@ import static java.util.Objects.requireNonNull;
 public class JoinNode
         extends AbstractJoinNode
 {
-    private final Type type;
+    private final ConnectorJoinNode.Type type;
     private final PlanNode left;
     private final PlanNode right;
-    private final List<EquiJoinClause> criteria;
+    private final List<ConnectorJoinNode.EquiJoinClause> criteria;
     private final List<VariableReferenceExpression> outputVariables;
     private final Optional<RowExpression> filter;
     private final Optional<VariableReferenceExpression> leftHashVariable;
@@ -72,10 +72,10 @@ public class JoinNode
     public JoinNode(
             Optional<SourceLocation> sourceLocation,
             @JsonProperty("id") PlanNodeId id,
-            @JsonProperty("type") Type type,
+            @JsonProperty("type") ConnectorJoinNode.Type type,
             @JsonProperty("left") PlanNode left,
             @JsonProperty("right") PlanNode right,
-            @JsonProperty("criteria") List<EquiJoinClause> criteria,
+            @JsonProperty("criteria") List<ConnectorJoinNode.EquiJoinClause> criteria,
             @JsonProperty("outputVariables") List<VariableReferenceExpression> outputVariables,
             @JsonProperty("filter") Optional<RowExpression> filter,
             @JsonProperty("leftHashVariable") Optional<VariableReferenceExpression> leftHashVariable,
@@ -90,10 +90,10 @@ public class JoinNode
             Optional<SourceLocation> sourceLocation,
             PlanNodeId id,
             Optional<PlanNode> statsEquivalentPlanNode,
-            Type type,
+            ConnectorJoinNode.Type type,
             PlanNode left,
             PlanNode right,
-            List<EquiJoinClause> criteria,
+            List<ConnectorJoinNode.EquiJoinClause> criteria,
             List<VariableReferenceExpression> outputVariables,
             Optional<RowExpression> filter,
             Optional<VariableReferenceExpression> leftHashVariable,
@@ -179,7 +179,7 @@ public class JoinNode
     }
 
     @VisibleForTesting
-    public static Type flipType(Type type)
+    public static ConnectorJoinNode.Type flipType(ConnectorJoinNode.Type type)
     {
         switch (type) {
             case INNER:
@@ -195,10 +195,10 @@ public class JoinNode
         }
     }
 
-    private static List<EquiJoinClause> flipJoinCriteria(List<EquiJoinClause> joinCriteria)
+    private static List<ConnectorJoinNode.EquiJoinClause> flipJoinCriteria(List<ConnectorJoinNode.EquiJoinClause> joinCriteria)
     {
         return joinCriteria.stream()
-                .map(EquiJoinClause::flip)
+                .map(ConnectorJoinNode.EquiJoinClause::flip)
                 .collect(toImmutableList());
     }
 
@@ -222,40 +222,8 @@ public class JoinNode
         REPLICATED
     }
 
-    public enum Type
-    {
-        INNER("InnerJoin"),
-        LEFT("LeftJoin"),
-        RIGHT("RightJoin"),
-        FULL("FullJoin");
-
-        private final String joinLabel;
-
-        Type(String joinLabel)
-        {
-            this.joinLabel = joinLabel;
-        }
-
-        public String getJoinLabel()
-        {
-            return joinLabel;
-        }
-
-        public boolean mustPartition()
-        {
-            // With REPLICATED, the unmatched rows from right-side would be duplicated.
-            return this == RIGHT || this == FULL;
-        }
-
-        public boolean mustReplicate(List<JoinNode.EquiJoinClause> criteria)
-        {
-            // There is nothing to partition on
-            return criteria.isEmpty() && (this == INNER || this == LEFT);
-        }
-    }
-
     @JsonProperty
-    public Type getType()
+    public ConnectorJoinNode.Type getType()
     {
         return type;
     }
@@ -285,7 +253,7 @@ public class JoinNode
     }
 
     @JsonProperty
-    public List<EquiJoinClause> getCriteria()
+    public List<ConnectorJoinNode.EquiJoinClause> getCriteria()
     {
         return criteria;
     }
@@ -374,64 +342,5 @@ public class JoinNode
     public boolean isCrossJoin()
     {
         return criteria.isEmpty() && !filter.isPresent() && type == INNER;
-    }
-
-    public static class EquiJoinClause
-    {
-        private final VariableReferenceExpression left;
-        private final VariableReferenceExpression right;
-
-        @JsonCreator
-        public EquiJoinClause(@JsonProperty("left") VariableReferenceExpression left, @JsonProperty("right") VariableReferenceExpression right)
-        {
-            this.left = requireNonNull(left, "left is null");
-            this.right = requireNonNull(right, "right is null");
-        }
-
-        @JsonProperty
-        public VariableReferenceExpression getLeft()
-        {
-            return left;
-        }
-
-        @JsonProperty
-        public VariableReferenceExpression getRight()
-        {
-            return right;
-        }
-
-        public EquiJoinClause flip()
-        {
-            return new EquiJoinClause(right, left);
-        }
-
-        @Override
-        public boolean equals(Object obj)
-        {
-            if (this == obj) {
-                return true;
-            }
-
-            if (obj == null || !this.getClass().equals(obj.getClass())) {
-                return false;
-            }
-
-            EquiJoinClause other = (EquiJoinClause) obj;
-
-            return Objects.equals(this.left, other.left) &&
-                    Objects.equals(this.right, other.right);
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash(left, right);
-        }
-
-        @Override
-        public String toString()
-        {
-            return format("%s = %s", left, right);
-        }
     }
 }

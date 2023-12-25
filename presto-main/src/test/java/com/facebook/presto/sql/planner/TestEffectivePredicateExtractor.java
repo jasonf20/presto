@@ -24,6 +24,7 @@ import com.facebook.presto.spi.ColumnHandle;
 import com.facebook.presto.spi.ConnectorId;
 import com.facebook.presto.spi.TableHandle;
 import com.facebook.presto.spi.plan.AggregationNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.FilterNode;
 import com.facebook.presto.spi.plan.LimitNode;
 import com.facebook.presto.spi.plan.Ordering;
@@ -424,10 +425,10 @@ public class TestEffectivePredicateExtractor
     @Test
     public void testInnerJoin()
     {
-        ImmutableList.Builder<JoinNode.EquiJoinClause> criteriaBuilder = ImmutableList.builder();
-        criteriaBuilder.add(new JoinNode.EquiJoinClause(AV, DV));
-        criteriaBuilder.add(new JoinNode.EquiJoinClause(BV, EV));
-        List<JoinNode.EquiJoinClause> criteria = criteriaBuilder.build();
+        ImmutableList.Builder<ConnectorJoinNode.EquiJoinClause> criteriaBuilder = ImmutableList.builder();
+        criteriaBuilder.add(new ConnectorJoinNode.EquiJoinClause(AV, DV));
+        criteriaBuilder.add(new ConnectorJoinNode.EquiJoinClause(BV, EV));
+        List<ConnectorJoinNode.EquiJoinClause> criteria = criteriaBuilder.build();
 
         Map<VariableReferenceExpression, ColumnHandle> leftAssignments = Maps.filterKeys(scanAssignments, Predicates.in(ImmutableList.of(AV, BV, CV)));
         TableScanNode leftScan = tableScanNode(leftAssignments);
@@ -448,7 +449,7 @@ public class TestEffectivePredicateExtractor
         PlanNode node = new JoinNode(
                 Optional.empty(),
                 newId(),
-                JoinNode.Type.INNER,
+                ConnectorJoinNode.Type.INNER,
                 left,
                 right,
                 criteria,
@@ -490,10 +491,10 @@ public class TestEffectivePredicateExtractor
         PlanNode node = new JoinNode(
                 Optional.empty(),
                 newId(),
-                JoinNode.Type.INNER,
+                ConnectorJoinNode.Type.INNER,
                 left,
                 rightScan,
-                ImmutableList.of(new JoinNode.EquiJoinClause(AV, DV)),
+                ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(AV, DV)),
                 ImmutableList.<VariableReferenceExpression>builder()
                         .addAll(rightScan.getOutputVariables())
                         .build(),
@@ -522,10 +523,10 @@ public class TestEffectivePredicateExtractor
         PlanNode node = new JoinNode(
                 Optional.empty(),
                 newId(),
-                JoinNode.Type.INNER,
+                ConnectorJoinNode.Type.INNER,
                 leftScan,
                 rightScan,
-                ImmutableList.of(new JoinNode.EquiJoinClause(AV, DV)),
+                ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(AV, DV)),
                 ImmutableList.<VariableReferenceExpression>builder()
                         .addAll(leftScan.getOutputVariables())
                         .addAll(rightScan.getOutputVariables())
@@ -544,10 +545,10 @@ public class TestEffectivePredicateExtractor
     @Test
     public void testLeftJoin()
     {
-        ImmutableList.Builder<JoinNode.EquiJoinClause> criteriaBuilder = ImmutableList.builder();
-        criteriaBuilder.add(new JoinNode.EquiJoinClause(AV, DV));
-        criteriaBuilder.add(new JoinNode.EquiJoinClause(BV, EV));
-        List<JoinNode.EquiJoinClause> criteria = criteriaBuilder.build();
+        ImmutableList.Builder<ConnectorJoinNode.EquiJoinClause> criteriaBuilder = ImmutableList.builder();
+        criteriaBuilder.add(new ConnectorJoinNode.EquiJoinClause(AV, DV));
+        criteriaBuilder.add(new ConnectorJoinNode.EquiJoinClause(BV, EV));
+        List<ConnectorJoinNode.EquiJoinClause> criteria = criteriaBuilder.build();
 
         Map<VariableReferenceExpression, ColumnHandle> leftAssignments = Maps.filterKeys(scanAssignments, Predicates.in(ImmutableList.of(AV, BV, CV)));
         TableScanNode leftScan = tableScanNode(leftAssignments);
@@ -567,7 +568,7 @@ public class TestEffectivePredicateExtractor
         PlanNode node = new JoinNode(
                 Optional.empty(),
                 newId(),
-                JoinNode.Type.LEFT,
+                ConnectorJoinNode.Type.LEFT,
                 left,
                 right,
                 criteria,
@@ -596,7 +597,7 @@ public class TestEffectivePredicateExtractor
     @Test
     public void testLeftJoinWithFalseInner()
     {
-        List<JoinNode.EquiJoinClause> criteria = ImmutableList.of(new JoinNode.EquiJoinClause(AV, DV));
+        List<ConnectorJoinNode.EquiJoinClause> criteria = ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(AV, DV));
 
         Map<VariableReferenceExpression, ColumnHandle> leftAssignments = Maps.filterKeys(scanAssignments, Predicates.in(ImmutableList.of(AV, BV, CV)));
         TableScanNode leftScan = tableScanNode(leftAssignments);
@@ -613,7 +614,7 @@ public class TestEffectivePredicateExtractor
         PlanNode node = new JoinNode(
                 Optional.empty(),
                 newId(),
-                JoinNode.Type.LEFT,
+                ConnectorJoinNode.Type.LEFT,
                 left,
                 right,
                 criteria,
@@ -639,10 +640,10 @@ public class TestEffectivePredicateExtractor
     @Test
     public void testRightJoin()
     {
-        ImmutableList.Builder<JoinNode.EquiJoinClause> criteriaBuilder = ImmutableList.builder();
-        criteriaBuilder.add(new JoinNode.EquiJoinClause(AV, DV));
-        criteriaBuilder.add(new JoinNode.EquiJoinClause(BV, EV));
-        List<JoinNode.EquiJoinClause> criteria = criteriaBuilder.build();
+        ImmutableList.Builder<ConnectorJoinNode.EquiJoinClause> criteriaBuilder = ImmutableList.builder();
+        criteriaBuilder.add(new ConnectorJoinNode.EquiJoinClause(AV, DV));
+        criteriaBuilder.add(new ConnectorJoinNode.EquiJoinClause(BV, EV));
+        List<ConnectorJoinNode.EquiJoinClause> criteria = criteriaBuilder.build();
 
         Map<VariableReferenceExpression, ColumnHandle> leftAssignments = Maps.filterKeys(scanAssignments, Predicates.in(ImmutableList.of(AV, BV, CV)));
         TableScanNode leftScan = tableScanNode(leftAssignments);
@@ -662,7 +663,7 @@ public class TestEffectivePredicateExtractor
         PlanNode node = new JoinNode(
                 Optional.empty(),
                 newId(),
-                JoinNode.Type.RIGHT,
+                ConnectorJoinNode.Type.RIGHT,
                 left,
                 right,
                 criteria,
@@ -691,7 +692,7 @@ public class TestEffectivePredicateExtractor
     @Test
     public void testRightJoinWithFalseInner()
     {
-        List<JoinNode.EquiJoinClause> criteria = ImmutableList.of(new JoinNode.EquiJoinClause(AV, DV));
+        List<ConnectorJoinNode.EquiJoinClause> criteria = ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(AV, DV));
 
         Map<VariableReferenceExpression, ColumnHandle> leftAssignments = Maps.filterKeys(scanAssignments, Predicates.in(ImmutableList.of(AV, BV, CV)));
         TableScanNode leftScan = tableScanNode(leftAssignments);
@@ -707,7 +708,7 @@ public class TestEffectivePredicateExtractor
         PlanNode node = new JoinNode(
                 Optional.empty(),
                 newId(),
-                JoinNode.Type.RIGHT,
+                ConnectorJoinNode.Type.RIGHT,
                 left,
                 right,
                 criteria,

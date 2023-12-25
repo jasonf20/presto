@@ -16,6 +16,7 @@ package com.facebook.presto.sql.planner.plan;
 import com.facebook.presto.matching.Pattern;
 import com.facebook.presto.matching.Property;
 import com.facebook.presto.spi.plan.AggregationNode;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.FilterNode;
 import com.facebook.presto.spi.plan.IntersectNode;
 import com.facebook.presto.spi.plan.LimitNode;
@@ -236,7 +237,7 @@ public class Patterns
 
     public static class Join
     {
-        public static Property<JoinNode, JoinNode.Type> type()
+        public static Property<JoinNode, ConnectorJoinNode.Type> type()
         {
             return property("type", JoinNode::getType);
         }

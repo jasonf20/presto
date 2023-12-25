@@ -14,6 +14,7 @@
 package com.facebook.presto.sql.planner.plan;
 
 import com.facebook.presto.spi.SourceLocation;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.relation.RowExpression;
@@ -34,10 +35,10 @@ import static java.util.Objects.requireNonNull;
 public class MergeJoinNode
         extends InternalPlanNode
 {
-    private final JoinNode.Type type;
+    private final ConnectorJoinNode.Type type;
     private final PlanNode left;
     private final PlanNode right;
-    private final List<JoinNode.EquiJoinClause> criteria;
+    private final List<ConnectorJoinNode.EquiJoinClause> criteria;
     private final Optional<RowExpression> filter;
     private final List<VariableReferenceExpression> outputVariables;
     private final Optional<VariableReferenceExpression> leftHashVariable;
@@ -47,10 +48,10 @@ public class MergeJoinNode
     public MergeJoinNode(
             Optional<SourceLocation> sourceLocation,
             @JsonProperty ("id") PlanNodeId id,
-            @JsonProperty("type") JoinNode.Type type,
+            @JsonProperty("type") ConnectorJoinNode.Type type,
             @JsonProperty("left") PlanNode left,
             @JsonProperty("right") PlanNode right,
-            @JsonProperty("criteria") List<JoinNode.EquiJoinClause> criteria,
+            @JsonProperty("criteria") List<ConnectorJoinNode.EquiJoinClause> criteria,
             @JsonProperty("outputVariables") List<VariableReferenceExpression> outputVariables,
             @JsonProperty("filter") Optional<RowExpression> filter,
             @JsonProperty("leftHashVariable") Optional<VariableReferenceExpression> leftHashVariable,
@@ -63,10 +64,10 @@ public class MergeJoinNode
             Optional<SourceLocation> sourceLocation,
             PlanNodeId id,
             Optional<PlanNode> statsEquivalentPlanNode,
-            JoinNode.Type type,
+            ConnectorJoinNode.Type type,
             PlanNode left,
             PlanNode right,
-            List<JoinNode.EquiJoinClause> criteria,
+            List<ConnectorJoinNode.EquiJoinClause> criteria,
             List<VariableReferenceExpression> outputVariables,
             Optional<RowExpression> filter,
             Optional<VariableReferenceExpression> leftHashVariable,
@@ -84,7 +85,7 @@ public class MergeJoinNode
     }
 
     @JsonProperty
-    public JoinNode.Type getType()
+    public ConnectorJoinNode.Type getType()
     {
         return type;
     }
@@ -102,7 +103,7 @@ public class MergeJoinNode
     }
 
     @JsonProperty
-    public List<JoinNode.EquiJoinClause> getCriteria()
+    public List<ConnectorJoinNode.EquiJoinClause> getCriteria()
     {
         return criteria;
     }

@@ -13,8 +13,8 @@
  */
 package com.facebook.presto.sql.planner.iterative.rule;
 
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.sql.planner.iterative.rule.test.BaseRuleTest;
-import com.facebook.presto.sql.planner.plan.JoinNode;
 import org.testng.annotations.Test;
 
 import static com.facebook.presto.common.type.BigintType.BIGINT;
@@ -37,10 +37,10 @@ public class TestLeftJoinNullFilterToSemiJoin
                     p.variable("right_k1", BIGINT);
                     return p.filter(
                             p.rowExpression("right_k1 is null"),
-                            p.join(JoinNode.Type.LEFT,
+                            p.join(ConnectorJoinNode.Type.LEFT,
                                     p.values(p.variable("left_k1"), p.variable("left_k2")),
                                     p.values(p.variable("right_k1")),
-                                    new JoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
+                                    new ConnectorJoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
                 })
                 .matches(
                         project(
@@ -65,11 +65,11 @@ public class TestLeftJoinNullFilterToSemiJoin
                     p.variable("right_k1", BIGINT);
                     return p.filter(
                             p.rowExpression("right_k1 is null"),
-                            p.join(JoinNode.Type.LEFT,
+                            p.join(ConnectorJoinNode.Type.LEFT,
                                     p.values(p.variable("left_k1"), p.variable("left_k2")),
                                     p.values(p.variable("right_k1")),
                                     p.rowExpression("left_k2 > 10"),
-                                    new JoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
+                                    new ConnectorJoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
                 }).doesNotFire();
     }
 
@@ -84,10 +84,10 @@ public class TestLeftJoinNullFilterToSemiJoin
                     p.variable("right_k1", BIGINT);
                     return p.filter(
                             p.rowExpression("right_k1 is not null"),
-                            p.join(JoinNode.Type.LEFT,
+                            p.join(ConnectorJoinNode.Type.LEFT,
                                     p.values(p.variable("left_k1"), p.variable("left_k2")),
                                     p.values(p.variable("right_k1")),
-                                    new JoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
+                                    new ConnectorJoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
                 }).doesNotFire();
     }
 
@@ -103,10 +103,10 @@ public class TestLeftJoinNullFilterToSemiJoin
                     p.variable("right_k2", BIGINT);
                     return p.filter(
                             p.rowExpression("right_k1 is null"),
-                            p.join(JoinNode.Type.LEFT,
+                            p.join(ConnectorJoinNode.Type.LEFT,
                                     p.values(p.variable("left_k1"), p.variable("left_k2")),
                                     p.values(p.variable("right_k1"), p.variable("right_k2")),
-                                    new JoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
+                                    new ConnectorJoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
                 }).doesNotFire();
     }
 
@@ -121,10 +121,10 @@ public class TestLeftJoinNullFilterToSemiJoin
                     p.variable("right_k1", BIGINT);
                     return p.filter(
                             p.rowExpression("right_k1 is null or right_k1 > 2"),
-                            p.join(JoinNode.Type.LEFT,
+                            p.join(ConnectorJoinNode.Type.LEFT,
                                     p.values(p.variable("left_k1"), p.variable("left_k2")),
                                     p.values(p.variable("right_k1")),
-                                    new JoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
+                                    new ConnectorJoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
                 }).doesNotFire();
     }
 
@@ -139,10 +139,10 @@ public class TestLeftJoinNullFilterToSemiJoin
                     p.variable("right_k1", BIGINT);
                     return p.filter(
                             p.rowExpression("right_k1 is null and right_k1 > 2"),
-                            p.join(JoinNode.Type.LEFT,
+                            p.join(ConnectorJoinNode.Type.LEFT,
                                     p.values(p.variable("left_k1"), p.variable("left_k2")),
                                     p.values(p.variable("right_k1")),
-                                    new JoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
+                                    new ConnectorJoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
                 }).doesNotFire();
     }
 
@@ -157,10 +157,10 @@ public class TestLeftJoinNullFilterToSemiJoin
                     p.variable("right_k1", BIGINT);
                     return p.filter(
                             p.rowExpression("right_k1 is null or left_k2 > 2"),
-                            p.join(JoinNode.Type.LEFT,
+                            p.join(ConnectorJoinNode.Type.LEFT,
                                     p.values(p.variable("left_k1"), p.variable("left_k2")),
                                     p.values(p.variable("right_k1")),
-                                    new JoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
+                                    new ConnectorJoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
                 }).doesNotFire();
     }
 
@@ -175,10 +175,10 @@ public class TestLeftJoinNullFilterToSemiJoin
                     p.variable("right_k1", BIGINT);
                     return p.filter(
                             p.rowExpression("right_k1 is null and left_k2 > 2"),
-                            p.join(JoinNode.Type.LEFT,
+                            p.join(ConnectorJoinNode.Type.LEFT,
                                     p.values(p.variable("left_k1"), p.variable("left_k2")),
                                     p.values(p.variable("right_k1")),
-                                    new JoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
+                                    new ConnectorJoinNode.EquiJoinClause(p.variable("left_k1"), p.variable("right_k1"))));
                 })
                 .matches(
                         filter(

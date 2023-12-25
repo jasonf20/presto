@@ -33,12 +33,12 @@ import com.facebook.presto.cost.PlanNodeStatsEstimate;
 import com.facebook.presto.cost.VariableStatsEstimate;
 import com.facebook.presto.spark.PrestoSparkSessionProperties;
 import com.facebook.presto.spark.PrestoSparkSessionPropertyManagerProvider;
+import com.facebook.presto.spi.plan.ConnectorJoinNode;
 import com.facebook.presto.spi.plan.PlanNodeId;
 import com.facebook.presto.spi.relation.VariableReferenceExpression;
 import com.facebook.presto.sql.planner.iterative.rule.test.RuleAssert;
 import com.facebook.presto.sql.planner.iterative.rule.test.RuleTester;
 import com.facebook.presto.sql.planner.plan.ExchangeNode;
-import com.facebook.presto.sql.planner.plan.JoinNode;
 import com.facebook.presto.sql.planner.plan.PlanFragmentId;
 import com.facebook.presto.tpch.TpchConnectorFactory;
 import com.google.common.collect.ImmutableList;
@@ -57,6 +57,9 @@ import static com.facebook.presto.common.type.BigintType.BIGINT;
 import static com.facebook.presto.common.type.VarcharType.createUnboundedVarcharType;
 import static com.facebook.presto.expressions.LogicalRowExpressions.TRUE_CONSTANT;
 import static com.facebook.presto.spark.PrestoSparkSessionProperties.ADAPTIVE_JOIN_SIDE_SWITCHING_ENABLED;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.INNER;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.LEFT;
+import static com.facebook.presto.spi.plan.ConnectorJoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.equiJoinClause;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.exchange;
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.filter;
@@ -66,9 +69,6 @@ import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.values
 import static com.facebook.presto.sql.planner.iterative.rule.test.PlanBuilder.constantExpressions;
 import static com.facebook.presto.sql.planner.plan.JoinNode.DistributionType.PARTITIONED;
 import static com.facebook.presto.sql.planner.plan.JoinNode.DistributionType.REPLICATED;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.LEFT;
-import static com.facebook.presto.sql.planner.plan.JoinNode.Type.RIGHT;
 import static com.facebook.presto.sql.planner.plan.JoinNode.flipType;
 import static com.facebook.presto.testing.TestngUtils.toDataProvider;
 
@@ -100,12 +100,12 @@ public class TestPickJoinSides
     @DataProvider(name = "joinTypes")
     public static Object[][] joinTypes()
     {
-        return Arrays.stream(JoinNode.Type.values())
+        return Arrays.stream(ConnectorJoinNode.Type.values())
                 .collect(toDataProvider());
     }
 
     @Test(dataProvider = "joinTypes")
-    public void testFlipsWhenProbeSmaller(JoinNode.Type joinType)
+    public void testFlipsWhenProbeSmaller(ConnectorJoinNode.Type joinType)
     {
         int aSize = 100;
         int bSize = 10_000;
@@ -127,7 +127,7 @@ public class TestPickJoinSides
                                         new PlanNodeId("valuesB"),
                                         ImmutableList.of(p.variable("B1")),
                                         ImmutableList.of(constantExpressions(BIGINT, 50L), constantExpressions(BIGINT, 11L))),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty(),
                                 Optional.empty(),
@@ -144,7 +144,7 @@ public class TestPickJoinSides
     }
 
     @Test(dataProvider = "joinTypes")
-    public void testDoesNotFireWhenTablesSameSize(JoinNode.Type joinType)
+    public void testDoesNotFireWhenTablesSameSize(ConnectorJoinNode.Type joinType)
     {
         int aSize = 100;
         int bSize = 100;
@@ -164,7 +164,7 @@ public class TestPickJoinSides
                                 p.values(
                                         ImmutableList.of(p.variable("B1")),
                                         ImmutableList.of(constantExpressions(BIGINT, 50L), constantExpressions(BIGINT, 11L))),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty(),
                                 Optional.empty(),
@@ -175,7 +175,7 @@ public class TestPickJoinSides
     }
 
     @Test(dataProvider = "joinTypes")
-    public void testFlipWhenOneTableMuchSmallerAndJoinCardinalityUnknown(JoinNode.Type joinType)
+    public void testFlipWhenOneTableMuchSmallerAndJoinCardinalityUnknown(ConnectorJoinNode.Type joinType)
     {
         int aRows = 100;
         int bRows = 10_000;
@@ -195,7 +195,7 @@ public class TestPickJoinSides
                                 joinType,
                                 p.values(new PlanNodeId("valuesA"), aRows, p.variable("A1", BIGINT)),
                                 p.values(new PlanNodeId("valuesB"), bRows, p.variable("B1", BIGINT)),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty(),
                                 Optional.empty(),
@@ -238,7 +238,7 @@ public class TestPickJoinSides
                             LEFT,
                             p.filter(new PlanNodeId("filterB"), TRUE_CONSTANT, p.values(new PlanNodeId("valuesB"), bRows, b1)),
                             p.values(new PlanNodeId("valuesA"), aRows, a1),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(b1, a1)),
+                            ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(b1, a1)),
                             ImmutableList.of(b1, a1),
                             Optional.empty(),
                             Optional.empty(),
@@ -295,7 +295,7 @@ public class TestPickJoinSides
                                     new PlanNodeId("filterB"),
                                     TRUE_CONSTANT,
                                     p.remoteSource(new PlanNodeId("remoteSourceB"), ImmutableList.of(new PlanFragmentId(2)), ImmutableList.of(b1))),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(a1, b1)),
+                            ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(a1, b1)),
                             ImmutableList.of(a1, b1),
                             Optional.empty(),
                             Optional.empty(),
@@ -324,7 +324,7 @@ public class TestPickJoinSides
                                     .fixedHashDistributionPartitioningScheme(ImmutableList.of(a1), ImmutableList.of(a1))
                                     .addInputsSet(a1)
                                     .addSource(p.remoteSource(new PlanNodeId("remoteSourceA"), ImmutableList.of(new PlanFragmentId(1)), ImmutableList.of(a1)))),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(b1, a1)),
+                            ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(b1, a1)),
                             ImmutableList.of(b1, a1),
                             Optional.empty(),
                             Optional.empty(),
@@ -363,7 +363,7 @@ public class TestPickJoinSides
                                     TRUE_CONSTANT,
                                     p.remoteSource(new PlanNodeId("remoteSourceB"), ImmutableList.of(new PlanFragmentId(2)), ImmutableList.of(b1))),
                             p.remoteSource(new PlanNodeId("remoteSourceA"), ImmutableList.of(new PlanFragmentId(1)), ImmutableList.of(a1)),
-                            ImmutableList.of(new JoinNode.EquiJoinClause(b1, a1)),
+                            ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(b1, a1)),
                             ImmutableList.of(b1, a1),
                             Optional.empty(),
                             Optional.empty(),
@@ -395,7 +395,7 @@ public class TestPickJoinSides
                                 p.values(
                                         ImmutableList.of(p.variable("B1")),
                                         ImmutableList.of(constantExpressions(BIGINT, 50L), constantExpressions(BIGINT, 11L))),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty(),
                                 Optional.empty(),
@@ -426,7 +426,7 @@ public class TestPickJoinSides
                                 p.values(
                                         ImmutableList.of(p.variable("B1")),
                                         ImmutableList.of(constantExpressions(BIGINT, 50L), constantExpressions(BIGINT, 11L))),
-                                ImmutableList.of(new JoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
+                                ImmutableList.of(new ConnectorJoinNode.EquiJoinClause(p.variable("A1", BIGINT), p.variable("B1", BIGINT))),
                                 ImmutableList.of(p.variable("A1", BIGINT), p.variable("B1", BIGINT)),
                                 Optional.empty(),
                                 Optional.empty(),
